@@ -1,16 +1,20 @@
+import DatePickerModal from "@/components/DatePickerModal";
+import TimePickerModal from "@/components/TimePickerModal";
+import { Responsive } from "@/src/constants/responsive";
 import { productRepository } from "@/src/repositories/productRepository";
 import type { Product } from "@/src/types/product";
+import { resolveProductImage } from "@/src/utils/productImage";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Modal from "react-native-modal";
 
@@ -30,7 +34,25 @@ export default function BuatPesanan() {
   const [lokasi, setLokasi] = useState("");
   const [isModalVisible, setModalVisible] = useState(false);
   const [remoteProduct, setRemoteProduct] = useState<Product | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [datePickerState, setDatePickerState] = useState<{
+    visible: boolean;
+    type: "sewa" | "kembali" | null;
+  }>({ visible: false, type: null });
+  const [timePickerVisible, setTimePickerVisible] = useState(false);
   const toggleModal = () => setModalVisible(!isModalVisible);
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!tanggalSewa.trim()) newErrors.tanggalSewa = "Tanggal sewa wajib diisi";
+    if (!tanggalKembali.trim()) newErrors.tanggalKembali = "Tanggal kembali wajib diisi";
+    if (!waktuKembali.trim()) newErrors.waktuKembali = "Waktu kembali wajib diisi";
+    if (!lokasi.trim()) newErrors.lokasi = "Lokasi pengambilan wajib diisi";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const router = useRouter();
 
@@ -67,6 +89,7 @@ export default function BuatPesanan() {
   }, [params.id, params.name, params.pricePerDay, params.price, params.location, params.plateNumber]);
 
   const displayedProduct = remoteProduct ?? fallbackProduct;
+  const carImageSource = resolveProductImage(displayedProduct.image);
 
   // Fungsi untuk kembali ke halaman sebelumnya
   const handleBackPress = () => {
@@ -83,8 +106,8 @@ export default function BuatPesanan() {
         </TouchableOpacity>
         <Text style={styles.sectionTitle}>Produk</Text>
         <View style={styles.productCard}>
-          {displayedProduct.image ? (
-            <Image source={{ uri: displayedProduct.image }} style={styles.carImage} />
+          {carImageSource ? (
+            <Image source={carImageSource} style={styles.carImage} />
           ) : (
             <View style={[styles.carImage, styles.emptyImage]} />
           )}
@@ -106,34 +129,45 @@ export default function BuatPesanan() {
       {/* DETAIL PENYEWAAN */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Detail Penyewaan</Text>
+        
+        <TouchableOpacity
+          style={[styles.input, styles.touchableInput, errors.tanggalSewa && styles.inputError]}
+          onPress={() => setDatePickerState({ visible: true, type: "sewa" })}
+        >
+          <Text style={[styles.inputText, !tanggalSewa && styles.placeholderText]}>
+            {tanggalSewa || "Tanggal Penyewaan (dd/mm/yyyy)"}
+          </Text>
+        </TouchableOpacity>
+        {errors.tanggalSewa && <Text style={styles.errorText}>{errors.tanggalSewa}</Text>}
+        
+        <TouchableOpacity
+          style={[styles.input, styles.touchableInput, errors.tanggalKembali && styles.inputError]}
+          onPress={() => setDatePickerState({ visible: true, type: "kembali" })}
+        >
+          <Text style={[styles.inputText, !tanggalKembali && styles.placeholderText]}>
+            {tanggalKembali || "Tanggal Pengembalian (dd/mm/yyyy)"}
+          </Text>
+        </TouchableOpacity>
+        {errors.tanggalKembali && <Text style={styles.errorText}>{errors.tanggalKembali}</Text>}
+        
+        <TouchableOpacity
+          style={[styles.input, styles.touchableInput, errors.waktuKembali && styles.inputError]}
+          onPress={() => setTimePickerVisible(true)}
+        >
+          <Text style={[styles.inputText, !waktuKembali && styles.placeholderText]}>
+            {waktuKembali || "Waktu Pengembalian (HH:mm)"}
+          </Text>
+        </TouchableOpacity>
+        {errors.waktuKembali && <Text style={styles.errorText}>{errors.waktuKembali}</Text>}
+        
         <TextInput
-          style={styles.input}
-          placeholder="Tanggal Penyewaan (mm/dd/yy)"
-          placeholderTextColor="#eee"
-          value={tanggalSewa}
-          onChangeText={setTanggalSewa}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Tanggal Pengembalian (mm/dd/yy)"
-          placeholderTextColor="#eee"
-          value={tanggalKembali}
-          onChangeText={setTanggalKembali}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Waktu Pengembalian (07:15)"
-          placeholderTextColor="#eee"
-          value={waktuKembali}
-          onChangeText={setWaktuKembali}
-        />
-        <TextInput
-          style={styles.input}
+          style={[styles.input, errors.lokasi && styles.inputError]}
           placeholder="Lokasi Pengambilan"
           placeholderTextColor="#eee"
           value={lokasi}
-          onChangeText={setLokasi}
+          onChangeText={(t) => { setLokasi(t); setErrors({...errors, lokasi: ""}); }}
         />
+        {errors.lokasi && <Text style={styles.errorText}>{errors.lokasi}</Text>}
       </View>
 
       {/* DETAIL PEMBAYARAN */}
@@ -144,7 +178,14 @@ export default function BuatPesanan() {
           <Text style={styles.totalPrice}>Rp1.900.000</Text>
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={toggleModal}>
+        <TouchableOpacity 
+          style={styles.button} 
+          onPress={() => {
+            if (validateForm()) {
+              toggleModal();
+            }
+          }}
+        >
           <Text style={styles.buttonText}>Buat Pesanan</Text>
         </TouchableOpacity>
       </View>
@@ -195,6 +236,42 @@ export default function BuatPesanan() {
           </View>
         </View>
       </Modal>
+
+      {/* Date Picker Modal untuk Tanggal Sewa */}
+      <DatePickerModal
+        isVisible={datePickerState.visible && datePickerState.type === "sewa"}
+        title="Pilih Tanggal Penyewaan"
+        onConfirm={(date) => {
+          setTanggalSewa(date);
+          setErrors({...errors, tanggalSewa: ""});
+          setDatePickerState({ visible: false, type: null });
+        }}
+        onCancel={() => setDatePickerState({ visible: false, type: null })}
+      />
+
+      {/* Date Picker Modal untuk Tanggal Kembali */}
+      <DatePickerModal
+        isVisible={datePickerState.visible && datePickerState.type === "kembali"}
+        title="Pilih Tanggal Pengembalian"
+        onConfirm={(date) => {
+          setTanggalKembali(date);
+          setErrors({...errors, tanggalKembali: ""});
+          setDatePickerState({ visible: false, type: null });
+        }}
+        onCancel={() => setDatePickerState({ visible: false, type: null })}
+      />
+
+      {/* Time Picker Modal untuk Waktu Kembali */}
+      <TimePickerModal
+        isVisible={timePickerVisible}
+        title="Pilih Waktu Pengembalian"
+        onConfirm={(time) => {
+          setWaktuKembali(time);
+          setErrors({...errors, waktuKembali: ""});
+          setTimePickerVisible(false);
+        }}
+        onCancel={() => setTimePickerVisible(false)}
+      />
     </ScrollView>
   );
 }
@@ -203,83 +280,104 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#C0342F",
-    padding: 10,
-    paddingTop: 30,
+    padding: Responsive.containerPadding.horizontal,
+    paddingTop: Responsive.spacing.xxxl,
   },
   productContainer: {
     backgroundColor: "white",
-    borderRadius: 15,
-    padding: 8,
-    marginBottom: 20,
+    borderRadius: Responsive.borderRadius.lg,
+    padding: Responsive.spacing.sm,
+    marginBottom: Responsive.spacing.xl,
   },
   backButton: {
     position: "absolute", 
-    left: 10,
-    top: 5,
-    borderRadius: 25,
-    padding: 8,
+    left: Responsive.spacing.lg,
+    top: Responsive.spacing.sm,
+    borderRadius: Responsive.borderRadius.full,
+    padding: Responsive.spacing.sm,
   },
   productCard: {
     flexDirection: "row",
     alignItems: "center",
   },
   carImage: {
-    width: 100,
-    height: 60,
-    borderRadius: 10,
+    width: Responsive.size(100),
+    height: Responsive.size(60),
+    borderRadius: Responsive.borderRadius.md,
   },
   emptyImage: {
     backgroundColor: "#eee",
   },
   carName: {
     fontFamily: "SFBold",
-    fontSize: 14,
+    fontSize: Responsive.fontSize.lg,
   },
   carInfo: {
-    fontSize: 8,
+    fontSize: Responsive.fontSize.xs,
     color: "#555",
   },
   carPrice: {
-    fontSize: 10,
+    fontSize: Responsive.fontSize.sm,
     color: "#1A1A8D",
     fontFamily: "SFMedium",
   },
   section: {
     backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 10,
+    borderRadius: Responsive.borderRadius.lg,
+    padding: Responsive.spacing.lg,
+    marginBottom: Responsive.spacing.md,
   },
   sectionTitle: {
-    width: 175,
     alignSelf: "center",
     textAlign: "center",
     backgroundColor: "#C0342F",
     color: "white",
     fontWeight: "600",
-    paddingHorizontal: 30,
-    paddingVertical: 4,
-    borderRadius: 15,
-    marginBottom: 10,
+    paddingHorizontal: Responsive.spacing.xxxl,
+    paddingVertical: Responsive.spacing.xs,
+    borderRadius: Responsive.borderRadius.lg,
+    marginBottom: Responsive.spacing.md,
   },
   input: {
     borderBottomWidth: 1,
     borderBottomColor: "white",
-    paddingVertical: 8,
+    paddingVertical: Responsive.spacing.sm,
     color: "white",
-    fontSize: 14,
-    marginBottom: 10,
+    fontSize: Responsive.fontSize.md,
+    marginBottom: Responsive.spacing.md,
+  },
+  touchableInput: {
+    justifyContent: "center",
+    paddingVertical: Responsive.spacing.md,
+  },
+  inputText: {
+    color: "white",
+    fontSize: Responsive.fontSize.md,
+  },
+  placeholderText: {
+    color: "#eee",
+  },
+  inputError: {
+    borderBottomColor: "#ff6b6b",
+    borderBottomWidth: 2,
+  },
+  errorText: {
+    color: "#ff6b6b",
+    fontSize: Responsive.fontSize.sm,
+    marginTop: -Responsive.spacing.sm,
+    marginBottom: Responsive.spacing.sm,
+    fontWeight: "600",
   },
   sectionTitle3: {
     alignSelf: "center",
     backgroundColor: "#C0342F",
     color: "white",
     fontFamily: "SFMedium",
-    paddingHorizontal: 30,
-    paddingVertical: 5,
-    borderRadius: 15,
-    marginTop: 6,
-    marginBottom: -12,
+    paddingHorizontal: Responsive.spacing.xxxl,
+    paddingVertical: Responsive.spacing.xs,
+    borderRadius: Responsive.borderRadius.lg,
+    marginTop: Responsive.spacing.sm,
+    marginBottom: -Responsive.spacing.md,
     zIndex: 1,
     elevation: 2,
   },
@@ -288,39 +386,40 @@ const styles = StyleSheet.create({
   },
   paymentCard: {
     flexDirection: "row",
-    height: 70,
+    height: Responsive.size(70),
     justifyContent: "space-between",
     backgroundColor: "white",
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 10,
+    borderRadius: Responsive.borderRadius.lg,
+    padding: Responsive.spacing.lg,
+    marginBottom: Responsive.spacing.md,
   },
   totalText: {
     fontWeight: "600",
     color: "#333",
-    paddingTop: 10,
+    paddingTop: Responsive.spacing.md,
   },
   totalPrice: {
     fontWeight: "700",
     color: "#000",
-    paddingTop: 10,
+    paddingTop: Responsive.spacing.md,
   },
   button: {
     backgroundColor: "#34A853",
-    paddingVertical: 10,
-    borderRadius: 20,
+    paddingVertical: Responsive.spacing.md,
+    borderRadius: Responsive.borderRadius.full,
     alignSelf: "center",
-    width: 160,
-    height: 35,
-    marginTop: -20,
+    width: Responsive.size(160),
+    height: Responsive.size(35),
+    marginTop: -Responsive.spacing.xl - 5,
     zIndex: 1,
     elevation: 2,
+    justifyContent: "center",
+    alignItems: "center",
   },
   buttonText: {
     color: "white",
-    paddingLeft: 40,
-    paddingBottom: 12,
     fontFamily: "SFMedium",
+    textAlign: "center",
   },
 
   // 🔻 Modal Styles
@@ -330,43 +429,45 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: "white",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+    borderTopLeftRadius: Responsive.borderRadius.xl,
+    borderTopRightRadius: Responsive.borderRadius.xl,
+    padding: Responsive.spacing.lg,
   },
   modalTitle: {
     alignSelf: "center",
     backgroundColor: "#C0342F",
     color: "white",
     fontWeight: "600",
-    paddingHorizontal: 30,
-    paddingVertical: 6,
-    borderRadius: 15,
-    marginBottom: 15,
+    paddingHorizontal: Responsive.spacing.xxxl,
+    paddingVertical: Responsive.spacing.xs,
+    borderRadius: Responsive.borderRadius.lg,
+    marginBottom: Responsive.spacing.lg,
   },
   modalInnerBox: {
     backgroundColor: "rgba(207, 87, 87, 1)",
-    borderRadius: 15,
-    padding: 15,
+    borderRadius: Responsive.borderRadius.lg,
+    padding: Responsive.spacing.lg,
   },
   modalLabel: {
     color: "white",
-    marginBottom: 5,
+    marginBottom: Responsive.spacing.xs,
   },
   modalInput: {
     borderBottomWidth: 1,
     borderBottomColor: "white",
     color: "white",
-    marginBottom: 15,
-    paddingVertical: 5,
+    marginBottom: Responsive.spacing.lg,
+    paddingVertical: Responsive.spacing.xs,
   },
   modalButton: {
     backgroundColor: "#34A853",
-    paddingVertical: 10,
-    marginLeft: 35,
-    borderRadius: 20,
-    marginTop: 10,
-    width: 150,
+    paddingVertical: Responsive.spacing.md,
+    borderRadius: Responsive.borderRadius.full,
+    marginTop: Responsive.spacing.md,
+    width: Responsive.size(150),
+    alignSelf: "center",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalButtonText: {
     color: "white",

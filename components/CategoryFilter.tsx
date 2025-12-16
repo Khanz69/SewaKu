@@ -1,48 +1,50 @@
+import { Responsive } from "@/src/constants/responsive";
 import { useState } from "react";
-import {
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-type CarTypeFilterProps = {
-  carTypes: string[];
-  selectedType: string;
-  onSelect: (type: string) => void;
+type CategoryFilterOption = {
+  key: string;
+  label: string;
 };
 
-export const CarTypeFilter = ({
-  carTypes,
-  selectedType,
-  onSelect,
-}: CarTypeFilterProps) => {
-  const [open, setOpen] = useState(false);
-  const label = selectedType || "Semua Jenis";
+type CategoryFilterProps = {
+  title?: string;
+  options: CategoryFilterOption[];
+  selectedKey: string;
+  onSelect: (key: string) => void;
+};
 
-  const handleSelect = (type: string) => {
-    onSelect(type);
+export default function CategoryFilter({
+  title = "Kategori",
+  options,
+  selectedKey,
+  onSelect,
+}: CategoryFilterProps) {
+  const [open, setOpen] = useState(false);
+  const selectedLabel = options.find((option) => option.key === selectedKey)?.label ?? "Semua";
+
+  const handleSelect = (key: string) => {
+    onSelect(key);
     setOpen(false);
   };
 
   return (
-    <View>
-      <Text style={styles.sectionTitle}>Jenis Kendaraan</Text>
+    <View style={styles.container}>
+      <Text style={styles.sectionTitle}>{title}</Text>
       <TouchableOpacity style={styles.dropdownToggle} onPress={() => setOpen(true)}>
-        <Text style={styles.dropdownLabel}>{label}</Text>
+        <Text style={styles.dropdownLabel}>{selectedLabel}</Text>
         <Text style={styles.dropdownCaret}>▾</Text>
       </TouchableOpacity>
       <Modal transparent visible={open} animationType="fade">
         <TouchableOpacity style={styles.modalOverlay} onPress={() => setOpen(false)} activeOpacity={1}>
           <View style={styles.dropdownList}>
-            {carTypes.map((type) => (
+            {options.map((option) => (
               <TouchableOpacity
-                key={type}
+                key={option.key}
                 style={styles.dropdownItem}
-                onPress={() => handleSelect(type)}
+                onPress={() => handleSelect(option.key)}
               >
-                <Text style={styles.dropdownItemText}>{type}</Text>
+                <Text style={styles.dropdownItemText}>{option.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -51,15 +53,18 @@ export const CarTypeFilter = ({
       <View style={styles.divider} />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
+  container: {
+    marginHorizontal: Responsive.containerPadding.horizontal,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: "#fff",
-    marginTop: 20,
-    marginBottom: 10,
+    marginTop: 6,
+    marginBottom: 8,
   },
   dropdownToggle: {
     flexDirection: "row",

@@ -1,33 +1,37 @@
 import { useRouter } from "expo-router";
 import {
+  Dimensions,
   Image,
   ImageBackground,
-  ScrollView,
+  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 
+const { height } = Dimensions.get("window");
+
 export default function Dashboard() {
   const router = useRouter();
 
   const categories = [
-    { name: "Alat Konstruksi", icon: require("@/assets/icons/beko.png") },
+    { name: "Alat Konstruksi", icon: require("@/assets/icons/beko.png"), route: "/Kategori/AlatKonstruksi" },
     { name: "Mobil", icon: require("@/assets/icons/mobil.png"), route: "/Kategori/Mobil" },
-    { name: "Bus", icon: require("@/assets/icons/bus.png") },
-    { name: "Motor", icon: require("@/assets/icons/motor.png") },
-    { name: "Logistik", icon: require("@/assets/icons/logistik.png") },
-    { name: "Lainnya", icon: require("@/assets/icons/lainnya.png") },
+    { name: "Bus", icon: require("@/assets/icons/bus.png"), route: "/Kategori/Bus" },
+    { name: "Motor", icon: require("@/assets/icons/motor.png"), route: "/Kategori/Motor" },
+    { name: "Logistik", icon: require("@/assets/icons/logistik.png"), route: "/Kategori/Logistik" },
+    { name: "Lainnya", icon: require("@/assets/icons/lainnya.png"), route: "/Kategori/Lainnya" },
   ];
 
   return (
-    <ImageBackground
-      source={require("@/assets/images/HalUbg.png")}
-      style={styles.background}
-      resizeMode= "stretch" 
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView style={styles.safeArea}>
+      <ImageBackground
+        source={require("@/assets/images/HalUbg.png")}
+        style={styles.background}
+        resizeMode= "stretch" 
+      >
+        <View style={styles.scrollContent}>
         {/* Header */}
         <Text style={styles.subtitle}>Kategori</Text>
 
@@ -37,7 +41,7 @@ export default function Dashboard() {
             <TouchableOpacity
               key={index}
               style={styles.card}
-              onPress={() => item.route && router.push(item.route)}
+              onPress={() => item.route && router.push(item.route as any)}
             >
               <Image source={item.icon} style={styles.icon} />
               <Text style={styles.cardText}>{item.name}</Text>
@@ -47,34 +51,41 @@ export default function Dashboard() {
 
         {/* Footer */}
         <Text style={styles.footer}>Versi Aplikasi: 1.0.0 {"\n"}2025 SewaKu</Text>
-      </ScrollView>
-    </ImageBackground>
+      </View>
+      </ImageBackground>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   background: {
     flex: 1,
     width: "100%",
     height: "100%",
   },
   scrollContent: {
-    flexGrow: 1,
+    flex: 1,
     padding: 20,
-    paddingTop: 230,
+    paddingTop: height * 0.42,
+    paddingBottom: 90,
+    justifyContent: "space-between",
   },
   subtitle: {
     color: "rgba(164, 44, 44, 1)",
     fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 15,
-    marginTop: 40,
+    marginBottom: 20,
+    marginTop: 0,
     fontFamily:"sfregular"
   },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    marginTop: 0,
   },
   card: {
     backgroundColor: "rgba(164, 44, 44, 1)",

@@ -1,6 +1,5 @@
 import { Car } from "@/src/types/car";
 import { useRouter } from "expo-router";
-import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type CarCardProps = {
@@ -28,6 +27,7 @@ export const CarCard = ({ car }: CarCardProps) => {
             bagCapacity: car.bagCapacity,
             transmission: car.transmission,
             carType: car.carType,
+              resource: car.resource,
             description: car.description,
           },
         })

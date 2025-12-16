@@ -1,14 +1,14 @@
+import { Responsive } from "@/src/constants/responsive";
 import { usePesananKu } from "@/src/hooks/usePesananKu";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
 import {
-    ImageBackground,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ImageBackground,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import OrderCard from "../components/OrderCard";
 
@@ -74,40 +74,42 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 10,
+    padding: Responsive.containerPadding.horizontal,
+    paddingBottom: 150,
   },
   header: {
     alignSelf: "center",
     color: "#fff",
-    fontSize: 30,
+    fontSize: Responsive.fontSize.display,
     fontFamily: "SFHeavyItalic",
-    marginTop: 55,
-    marginBottom: 15,
+    marginTop: Responsive.spacing.xxxl,
+    marginBottom: Responsive.spacing.lg,
   },
   searchBox: {
     backgroundColor: "#fff",
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 15,
+    borderRadius: Responsive.borderRadius.xl,
+    paddingHorizontal: Responsive.spacing.md,
+    paddingVertical: Responsive.spacing.sm,
+    marginBottom: Responsive.spacing.lg,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 8,
+    marginLeft: Responsive.spacing.sm,
     color: "#000",
+    fontSize: Responsive.fontSize.md,
   },
   tabContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginBottom: 15,
+    marginBottom: Responsive.spacing.lg,
   },
   tabButton: {
     backgroundColor: "#8B0000",
-    paddingVertical: 6,
-    paddingHorizontal: 26,
-    borderRadius: 20,
+    paddingVertical: Responsive.spacing.xs,
+    paddingHorizontal: Responsive.spacing.xxl,
+    borderRadius: Responsive.borderRadius.xl,
     opacity: 0.6,
   },
   tabButtonActive: {
@@ -117,8 +119,10 @@ const styles = StyleSheet.create({
   tabText: {
     color: "#fff",
     fontWeight: "600",
+    fontSize: Responsive.fontSize.sm,
   },
   tabTextActive: {
     color: "#C0342F",
+    fontSize: Responsive.fontSize.sm,
   },
 });

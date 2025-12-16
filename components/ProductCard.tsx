@@ -1,5 +1,5 @@
 import type { Product } from "@/src/types/product";
-import React from "react";
+import { resolveProductImage } from "@/src/utils/productImage";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type Props = {
@@ -10,10 +10,12 @@ type Props = {
 };
 
 export default function ProductCard({ item, onPressDetail, onPressEdit, onRequestDelete }: Props) {
+  const imageSource = resolveProductImage(item.image);
+
   return (
     <View style={styles.card}>
-      {item.image ? (
-        <Image source={{ uri: item.image }} style={styles.img} />
+      {imageSource ? (
+        <Image source={imageSource} style={styles.img} />
       ) : (
         <View style={[styles.img, { backgroundColor: "#eee" }]} />
       )}

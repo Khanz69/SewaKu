@@ -1,12 +1,16 @@
 import { Colors } from "@/constants/theme";
+import { Responsive } from "@/src/constants/responsive";
 import { useColorScheme } from "@/src/hooks/use-color-scheme";
+import { MOTOR_RESOURCE, motorRepository } from "@/src/repositories/motorRepository";
 import { productRepository } from "@/src/repositories/productRepository";
 import type { CarType, Product, Transmission } from "@/src/types/product";
+import { extractProductImageUrl, resolveProductImage } from "@/src/utils/productImage";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { RelativePathString, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
   ScrollView,
   StyleSheet,
@@ -14,6 +18,43 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+const { width, height } = Dimensions.get("window");
+
+// Mapping dummy images untuk kategori Alat Konstruksi, Bus, Motor, Logistik, dan Lainnya
+const placeholderImage = require("@/assets/images/audi.jpg");
+const dummyImageMap: { [key: string]: any } = {
+  "excavator-cat-320": placeholderImage,
+  "backhoe-jcb": placeholderImage,
+  "wheel-loader-komatsu": placeholderImage,
+  "vibrating-roller": placeholderImage,
+  "concrete-mixer": placeholderImage,
+  "power-generator": placeholderImage,
+  "bus-mercedes-50": placeholderImage,
+  "bus-hino-47": placeholderImage,
+  "bus-isuzu-30": placeholderImage,
+  "bus-mitsubishi-20": placeholderImage,
+  "bus-toyota-45": placeholderImage,
+  "bus-scania-40": placeholderImage,
+  "honda-cb150r": placeholderImage,
+  "yamaha-nmax": placeholderImage,
+  "kawasaki-ninja": placeholderImage,
+  "suzuki-gsx-r150": placeholderImage,
+  "honda-pcx": placeholderImage,
+  "yamaha-yzf-r15": placeholderImage,
+  "mitsubishi-pickup-1ton": placeholderImage,
+  "hino-engkel-5ton": placeholderImage,
+  "isuzu-box-6ton": placeholderImage,
+  "toyota-pickup-2ton": placeholderImage,
+  "colt-double-cabin-3.5ton": placeholderImage,
+  "tangki-5000liter": placeholderImage,
+  "ambulans-toyota-hiace": placeholderImage,
+  "mobil-jenazah-isuzu": placeholderImage,
+  "salon-mobile-van": placeholderImage,
+  "escape-room-mobile": placeholderImage,
+  "food-truck-kuliner": placeholderImage,
+  "perpustakaan-keliling": placeholderImage,
+};
 
 const detailTabs = [
   { name: "index", icon: require("@/assets/images/home.png"), label: "Home" },
@@ -38,6 +79,7 @@ export default function DetailMobil() {
     carType?: string;
     code?: string;
     plateNumber?: string;
+    resource?: string;
   }>();
 
   const [remoteProduct, setRemoteProduct] = useState<Product | null>(null);
@@ -81,8 +123,9 @@ export default function DetailMobil() {
     if (!params.id) return;
     let mounted = true;
     setLoading(true);
+    const repository = params.resource === MOTOR_RESOURCE ? motorRepository : productRepository;
 
-    productRepository
+    repository
       .getById(params.id)
       .then((item) => {
         if (mounted) setRemoteProduct(item);
@@ -95,9 +138,12 @@ export default function DetailMobil() {
     return () => {
       mounted = false;
     };
-  }, [params.id]);
+  }, [params.id, params.resource]);
 
   const displayedProduct = remoteProduct ?? fallbackProduct;
+  const resolvedImageUrl = extractProductImageUrl(displayedProduct?.image);
+  const dummyImage = resolvedImageUrl ? dummyImageMap[resolvedImageUrl] : undefined;
+  const carImageSource = dummyImage ?? resolveProductImage(displayedProduct?.image, placeholderImage) ?? placeholderImage;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#B71C1C" }}>
@@ -105,14 +151,10 @@ export default function DetailMobil() {
         {/* Kontainer 1: Gambar + Tombol Kembali */}
         <View style={{ position: "relative" }}>
           <Image
-            source={
-              displayedProduct?.image
-                ? { uri: displayedProduct.image }
-                : require("@/assets/images/audi.jpg")
-            }
+            source={carImageSource}
             style={{
-              width: "91%",
-              height: 200,
+              width: width * 0.91,
+              height: height * 0.22,
               marginLeft: 12,
               marginRight: 6,
               borderRadius: 16,
@@ -166,7 +208,7 @@ export default function DetailMobil() {
           {/* Nama Mobil */}
           <Text
             style={{
-              fontSize: 22,
+              fontSize: Responsive.fontSize.lg,
               fontFamily: "SFBold",
               color: "#000",
               marginBottom: 12,
@@ -187,8 +229,8 @@ export default function DetailMobil() {
                 marginVertical: 4,
               }}
             >
-              <FontAwesome5 name="users" size={18} color="#333" style={{ marginRight: 8 }} />
-              <Text style={{ fontSize: 13, color: "#333" }}>
+              <FontAwesome5 name="users" size={Responsive.fontSize.md} color="#333" style={{ marginRight: 8 }} />
+              <Text style={{ fontSize: Responsive.fontSize.sm, color: "#333" }}>
                 {displayedProduct?.seats ? `${displayedProduct.seats} Seats` : "- Seats"}
               </Text>
             </View>
@@ -202,8 +244,8 @@ export default function DetailMobil() {
                 marginVertical: 4,
               }}
             >
-              <Ionicons name="briefcase" size={18} color="#333" style={{ marginRight: 8 }} />
-              <Text style={{ fontSize: 13, color: "#333" }}>
+              <Ionicons name="briefcase" size={Responsive.fontSize.md} color="#333" style={{ marginRight: 8 }} />
+              <Text style={{ fontSize: Responsive.fontSize.sm, color: "#333" }}>
                 {displayedProduct?.bagCapacity ?? "Bagasi tidak tersedia"}
               </Text>
             </View>
@@ -217,8 +259,8 @@ export default function DetailMobil() {
                 marginVertical: 4,
               }}
             >
-              <MaterialIcons name="settings" size={18} color="#333" style={{ marginRight: 8 }} />
-              <Text style={{ fontSize: 13, color: "#333" }}>
+              <MaterialIcons name="settings" size={Responsive.fontSize.md} color="#333" style={{ marginRight: 8 }} />
+              <Text style={{ fontSize: Responsive.fontSize.sm, color: "#333" }}>
                 {displayedProduct?.transmission ?? "Transmisi belum tersedia"}
               </Text>
             </View>
@@ -232,15 +274,15 @@ export default function DetailMobil() {
                 marginVertical: 4,
               }}
             >
-              <Ionicons name="location-outline" size={18} color="#333" style={{ marginRight: 8 }} />
-              <Text style={{ fontSize: 13, color: "#333" }}>
+              <Ionicons name="location-outline" size={Responsive.fontSize.md} color="#333" style={{ marginRight: 8 }} />
+              <Text style={{ fontSize: Responsive.fontSize.sm, color: "#333" }}>
                 {displayedProduct?.lokasi ?? "-"}
               </Text>
             </View>
           </View>
 
           {/* Harga */}
-          <Text style={{ fontWeight: "bold", fontSize: 16, color: "#1A1A8D", marginBottom: 12 }}>
+          <Text style={{ fontWeight: "bold", fontSize: Responsive.fontSize.md, color: "#1A1A8D", marginBottom: 12 }}>
             {displayedProduct
               ? `Rp${displayedProduct.pricePerDay.toLocaleString("id-ID")} / hari`
               : params.price ?? "Rp0 / hari"}
@@ -248,8 +290,8 @@ export default function DetailMobil() {
 
           {/* Deskripsi */}
           <View style={{ borderTopWidth: 1, borderColor: "#ccc", paddingTop: 8 }}>
-            <Text style={{ fontWeight: "bold", color: "#000", marginBottom: 4 }}>Deskripsi</Text>
-            <Text style={{ fontSize: 13, lineHeight: 20, color: "#333" }}>
+            <Text style={{ fontWeight: "bold", color: "#000", marginBottom: 4, fontSize: Responsive.fontSize.md }}>Deskripsi</Text>
+            <Text style={{ fontSize: Responsive.fontSize.sm, lineHeight: 20, color: "#333" }}>
               {displayedProduct?.description ?? "Deskripsi tidak tersedia."}
             </Text>
           </View>
@@ -270,17 +312,15 @@ export default function DetailMobil() {
             }
             style={{
               backgroundColor: "#429046ff",
-              width: 150,
-              height: 35,
+              width: width * 0.45,
+              height: 40,
               borderRadius: 12,
               marginTop: 20,
-              marginLeft: 50,
-              paddingLeft: 28,
-              paddingRight: 12,
-              paddingTop: 10,
+              alignSelf: "center",
+              justifyContent: "center",
             }}
           >
-            <Text style={{ color: "#fff", fontSize: 12, fontFamily: "SFBold" }}>
+            <Text style={{ color: "#fff", fontSize: Responsive.fontSize.sm, fontFamily: "SFBold", textAlign: "center" }}>
               Pesan Sekarang
             </Text>
           </TouchableOpacity>

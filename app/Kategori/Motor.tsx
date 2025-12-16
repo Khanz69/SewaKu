@@ -1,22 +1,16 @@
 import { Responsive } from "@/src/constants/responsive";
-import { useMobil } from "@/src/hooks/useMobil";
+import { useMotor } from "@/src/hooks/useMotor";
 import { useNavigation } from "@react-navigation/native";
+import { useLayoutEffect } from "react";
 import { ActivityIndicator, Dimensions, ImageBackground, ScrollView, StyleSheet, Text, View } from "react-native";
-import { CarCard } from "../components/CarCard";
-import { CarTypeFilter } from "../components/CarTypeFilter";
-import { SearchBar } from "../components/SearchBar";
+import { CarCard } from "../../components/CarCard";
+import { CarTypeFilter } from "../../components/CarTypeFilter";
+import { SearchBar } from "../../components/SearchBar";
 
 const { height } = Dimensions.get("window");
 
-// Hitung padding top responsif berdasarkan tinggi screen
-const getResponsivePaddingTop = () => {
-  if (height < 700) return 8;      // Screen kecil (< 700px)
-  if (height < 800) return 12;     // Screen medium (700-800px)
-  if (height < 900) return 16;     // Screen besar (800-900px)
-  return 20;                        // Screen sangat besar (> 900px)
-};
-
-export default function MobilScreen() {
+export default function Motor() {
+  const navigation = useNavigation();
   const {
     selectedType,
     setSelectedType,
@@ -26,17 +20,28 @@ export default function MobilScreen() {
     filteredCars,
     loading,
     error,
-  } = useMobil();
-  const navigation = useNavigation(); // Inisialisasi navigasi
+  } = useMotor();
 
-  // Fungsi untuk kembali ke halaman sebelumnya
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
+
   const handleBackPress = () => {
-    navigation.goBack();  // Navigasi mundur ke halaman sebelumnya
+    navigation.goBack();
+  };
+
+  const getResponsivePaddingTop = () => {
+    if (height < 700) return 8;
+    if (height < 800) return 12;
+    if (height < 900) return 16;
+    return 20;
   };
 
   return (
     <ImageBackground
-      source={require("../assets/images/Jenismobilbg.png")}
+      source={require("../../assets/images/Jenismobilbg.png")}
       style={styles.background}
       resizeMode="stretch"
     >
@@ -55,10 +60,10 @@ export default function MobilScreen() {
           ) : error ? (
             <Text style={styles.messageText}>{error}</Text>
           ) : filteredCars.length === 0 ? (
-            <Text style={styles.messageText}>Data mobil tidak tersedia di saat ini.</Text>
+            <Text style={styles.messageText}>Motor tidak tersedia di saat ini.</Text>
           ) : (
-            filteredCars.map((car, index) => (
-              <CarCard key={`${car.code ?? car.name}-${index}`} car={car} />
+            filteredCars.map((motor, index) => (
+              <CarCard key={`${motor.code ?? motor.name}-${index}`} car={motor} />
             ))
           )}
         </ScrollView>

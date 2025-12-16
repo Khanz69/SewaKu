@@ -1,43 +1,119 @@
 import { CarType, Product, Transmission } from "@/src/types/product";
-import React, { useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { resolveProductImage } from "@/src/utils/productImage";
+import type { LocalImageAsset } from "@/src/utils/productRequest";
+import * as ImagePicker from "expo-image-picker";
+import React, { useEffect, useState } from "react";
+import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-type Props = { value: Partial<Product>; onChange: (data: Partial<Product>) => void };
+type Props = {
+  value: Partial<Product>;
+  onChange: (data: Partial<Product>) => void;
+  carTypeOptions?: string[];
+};
 
 const TRANSMISSIONS: Transmission[] = ["Manual", "Automatic"];
-const CARTYPES: CarType[] = ["City Car", "SUV", "MPV", "Sedan"];
-
-export default function ProductForm({ value, onChange }: Props) {
+const DEFAULT_CARTYPES: CarType[] = ["City Car", "SUV", "MPV", "Sedan"];
+export default function ProductForm({ value, onChange, carTypeOptions }: Props) {
   const [local, setLocal] = useState<Partial<Product>>(value);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const carTypes = carTypeOptions ?? DEFAULT_CARTYPES;
+  const [permissionError, setPermissionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== ImagePicker.PermissionStatus.GRANTED) {
+        setPermissionError("Izin galeri diperlukan untuk memilih gambar.");
+      } else {
+        setPermissionError(null);
+      }
+    })();
+  }, []);
+
+  const validate = (data: Partial<Product>) => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!data.name?.trim()) newErrors.name = "Nama produk wajib diisi";
+    if (!data.pricePerDay || data.pricePerDay <= 0) newErrors.pricePerDay = "Harga harus lebih dari 0";
+    if (!data.lokasi?.trim()) newErrors.lokasi = "Lokasi wajib diisi";
+    const hasImage =
+      typeof data.image === "string"
+        ? !!data.image.trim()
+        : Boolean(data.image);
+    if (!hasImage) newErrors.image = "Gambar produk wajib dipilih";
+    if (data.seats && data.seats <= 0) newErrors.seats = "Jumlah kursi harus lebih dari 0";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const set = <K extends keyof Product>(k: K, v: Product[K]) => {
     const next = { ...local, [k]: v };
     setLocal(next);
+    validate(next);
     onChange(next);
+  };
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (status !== ImagePicker.PermissionStatus.GRANTED) {
+      const request = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (request.status !== ImagePicker.PermissionStatus.GRANTED) {
+        setPermissionError("Izin galeri diperlukan untuk memilih gambar.");
+        return;
+      }
+    }
+    setPermissionError(null);
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    const enriched: LocalImageAsset = {
+      uri: asset.uri,
+      base64: asset.base64,
+      name: asset.fileName ?? `photo-${Date.now()}.jpg`,
+      type: asset.type ?? "image/jpeg",
+      width: asset.width,
+      height: asset.height,
+      size: asset.fileSize,
+    };
+    set("image", enriched);
   };
 
   return (
     <View style={s.container}>
-      {/* Hanya label "Gambar Produk" yang dipisah */}
-      <Text style={s.labelG}>Gambar Produk</Text>
-      <TextInput
-        style={s.input}
-        placeholder="URL Gambar"
-        value={local.image}
-        onChangeText={(t) => set("image", t)}
-      />
+      <Field label="Gambar Produk" error={errors.image}>
+        {permissionError ? (
+          <Text style={s.errorText}>{permissionError}</Text>
+        ) : (
+          <TouchableOpacity style={s.imagePicker} onPress={pickImage} activeOpacity={0.7}>
+            <Text style={s.imagePickerText}>
+              {local.image ? "Ganti gambar" : "Pilih gambar dari galeri"}
+            </Text>
+            {local.image && (
+              <Image source={resolveProductImage(local.image)} style={s.imagePreview} />
+            )}
+          </TouchableOpacity>
+        )}
+      </Field>
 
-      <Field label="Nama Produk">
-        <TextInput style={s.input} placeholder="Masukkan Nama Mobil" value={local.name} onChangeText={(t) => set("name", t)} />
+      <Field label="Nama Produk" error={errors.name}>
+        <TextInput style={[s.input, errors.name && s.inputError]} placeholder="Masukkan Nama Mobil" value={local.name} onChangeText={(t) => set("name", t)} />
       </Field>
 
       <Field label="Transmisi">
         <Pills options={TRANSMISSIONS} value={local.transmission} onChange={(v) => set("transmission", v)} />
       </Field>
 
-      <Field label="Jumlah Kursi">
+      <Field label="Jumlah Kursi" error={errors.seats}>
         <TextInput
-          style={s.input}
+          style={[s.input, errors.seats && s.inputError]}
           keyboardType="numeric"
           placeholder="Jumlah Kursi"
           value={local.seats?.toString()}
@@ -45,9 +121,9 @@ export default function ProductForm({ value, onChange }: Props) {
         />
       </Field>
 
-      <Field label="Harga / hari">
+      <Field label="Harga / hari" error={errors.pricePerDay}>
         <TextInput
-          style={s.input}
+          style={[s.input, errors.pricePerDay && s.inputError]}
           keyboardType="numeric"
           placeholder="Dalam Rupiah"
           value={local.pricePerDay?.toString()}
@@ -64,11 +140,11 @@ export default function ProductForm({ value, onChange }: Props) {
       </Field>
 
       <Field label="Jenis Mobil">
-        <Pills options={CARTYPES} value={local.carType} onChange={(v) => set("carType", v)} />
+        <Pills options={carTypes} value={local.carType} onChange={(v) => set("carType", v)} />
       </Field>
 
-      <Field label="Lokasi">
-        <TextInput style={s.input} placeholder="Masukkan Lokasi Anda" value={local.lokasi} onChangeText={(t) => set("lokasi", t)} />
+      <Field label="Lokasi" error={errors.lokasi}>
+        <TextInput style={[s.input, errors.lokasi && s.inputError]} placeholder="Masukkan Lokasi Anda" value={local.lokasi} onChangeText={(t) => set("lokasi", t)} />
       </Field>
 
       <Field label="Deskripsi Singkat">
@@ -84,11 +160,12 @@ export default function ProductForm({ value, onChange }: Props) {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
   return (
     <View style={s.fieldContainer}>
       <Text style={s.label}>{label}</Text>
       {children}
+      {error && <Text style={s.errorText}>{error}</Text>}
     </View>
   );
 }
@@ -125,6 +202,37 @@ const s = StyleSheet.create({
     borderColor: "#ddd",
     marginBottom: 12,
   },
+  imagePicker: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  imagePickerText: {
+    color: "#0f1e4a",
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  imagePreview: {
+    width: 180,
+    height: 120,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  inputError: {
+    borderColor: "#dc2626",
+    borderWidth: 2,
+  },
+  errorText: {
+    color: "#dc2626",
+    fontSize: 12,
+    marginTop: -10,
+    marginBottom: 8,
+    fontWeight: "600",
+  },
   pillsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -143,13 +251,6 @@ const s = StyleSheet.create({
   pillText: {
     color: "#0f1e4a",
     fontWeight: "600",
-  },
-  labelG: {
-    color: "#000",
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 6,
-    marginTop:8
   },
   label: {
     color: "#000",

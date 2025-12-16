@@ -1,4 +1,4 @@
-import type { CarType, Transmission } from "@/src/types/product";
+import type { Transmission } from "@/src/types/product";
 import { ImageSourcePropType } from "react-native";
 
 export type Car = {
@@ -10,9 +10,10 @@ export type Car = {
   location: string;
   image: ImageSourcePropType;
   imageName: string;
-  carType?: CarType;
+  carType?: string;
   transmission?: Transmission;
   description?: string;
   seats?: number;
   bagCapacity?: string;
+  resource?: string;
 };

@@ -1,5 +1,5 @@
+import { Responsive } from "@/src/constants/responsive";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
 import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 
 type SearchBarProps = {
@@ -14,16 +14,16 @@ export const SearchBar = ({ value, onChangeText, onBackPress }: SearchBarProps) 
       {/* Tombol Back */}
       {onBackPress && (
         <TouchableOpacity onPress={onBackPress} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={20} color="#220f0fff" />
+          <Ionicons name="arrow-back" size={18} color="#220f0fff" />
         </TouchableOpacity>
       )}
 
       {/* SearchBar dengan ikon Search */}
       <View style={styles.searchBox}>
-        <Ionicons name="search-outline" size={20} color="#220f0fff" style={styles.searchIcon} />
+        <Ionicons name="search-outline" size={18} color="#220f0fff" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Mobil apa yang anda cari?"
+          placeholder="Kendaraan apa yang anda cari?"
           placeholderTextColor="rgba(97, 90, 90, 0.67)"
           value={value}
           onChangeText={onChangeText}
@@ -37,31 +37,36 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center", 
-    marginTop: 26,
-    marginBottom: 24,
+    marginTop: Responsive.size(40),
+    marginBottom: Responsive.spacing.xxxl,
+    gap: Responsive.spacing.sm,
   },
   backButton: {
-    left: 5, 
     backgroundColor: "#efd0d0ff",
-    padding: 8, 
-    borderRadius: 10,
-    marginRight: 12
+    borderRadius: Responsive.borderRadius.md,
+    height: Responsive.size(40),
+    width: Responsive.size(40),
+    justifyContent: "center",
+    alignItems: "center",
   },
   searchBox: {
-    width: 225,
+    flex: 1,
     backgroundColor: "#efd0d0ff",
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    paddingRight: 24
+    borderRadius: Responsive.borderRadius.md,
+    paddingHorizontal: Responsive.spacing.sm,
+    height: Responsive.size(40),
+    maxWidth: Responsive.size(290),
   },
   searchIcon: {
-    marginRight: 12,
+    marginRight: Responsive.spacing.xs,
   },
   searchInput: {
     flex: 1,
     color: "black",
+    fontSize: Responsive.fontSize.sm,
+    paddingVertical: 0,
+    height: "100%",
   },
 });

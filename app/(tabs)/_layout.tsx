@@ -10,7 +10,7 @@ export default function TabLayout() {
   const [pressedTab, setPressedTab] = useState<string | null>(null);
 
   // Fungsi untuk menampilkan icon dengan efek klik
-  const renderIcon = (icon: any, name: string, size = 28) => (
+  const renderIcon = (icon: any, name: string, size = 28): React.ReactNode => (
     <TouchableOpacity
       activeOpacity={1}
       onPressIn={() => {

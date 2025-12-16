@@ -10,6 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import DatePickerModal from "@/components/DatePickerModal";
+import TimePickerModal from "@/components/TimePickerModal";
 
 export default function BuatPesanan() {
   const [tanggalSewa, setTanggalSewa] = useState("");
@@ -17,7 +19,25 @@ export default function BuatPesanan() {
   const [waktuKembali, setWaktuKembali] = useState("");
   const [lokasi, setLokasi] = useState("");
   const [isModalVisible, setModalVisible] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [datePickerState, setDatePickerState] = useState<{
+    visible: boolean;
+    type: "sewa" | "kembali" | null;
+  }>({ visible: false, type: null });
+  const [timePickerVisible, setTimePickerVisible] = useState(false);
   const toggleModal = () => setModalVisible(!isModalVisible);
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!tanggalSewa.trim()) newErrors.tanggalSewa = "Tanggal sewa wajib diisi";
+    if (!tanggalKembali.trim()) newErrors.tanggalKembali = "Tanggal kembali wajib diisi";
+    if (!waktuKembali.trim()) newErrors.waktuKembali = "Waktu kembali wajib diisi";
+    if (!lokasi.trim()) newErrors.lokasi = "Lokasi pengambilan wajib diisi";
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const router = useRouter();
 
@@ -52,34 +72,45 @@ export default function BuatPesanan() {
       {/* DETAIL PENYEWAAN */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Detail Penyewaan</Text>
+        
+        <TouchableOpacity
+          style={[styles.input, styles.touchableInput, errors.tanggalSewa && styles.inputError]}
+          onPress={() => setDatePickerState({ visible: true, type: "sewa" })}
+        >
+          <Text style={[styles.inputText, !tanggalSewa && styles.placeholderText]}>
+            {tanggalSewa || "Tanggal Penyewaan (dd/mm/yyyy)"}
+          </Text>
+        </TouchableOpacity>
+        {errors.tanggalSewa && <Text style={styles.errorText}>{errors.tanggalSewa}</Text>}
+        
+        <TouchableOpacity
+          style={[styles.input, styles.touchableInput, errors.tanggalKembali && styles.inputError]}
+          onPress={() => setDatePickerState({ visible: true, type: "kembali" })}
+        >
+          <Text style={[styles.inputText, !tanggalKembali && styles.placeholderText]}>
+            {tanggalKembali || "Tanggal Pengembalian (dd/mm/yyyy)"}
+          </Text>
+        </TouchableOpacity>
+        {errors.tanggalKembali && <Text style={styles.errorText}>{errors.tanggalKembali}</Text>}
+        
+        <TouchableOpacity
+          style={[styles.input, styles.touchableInput, errors.waktuKembali && styles.inputError]}
+          onPress={() => setTimePickerVisible(true)}
+        >
+          <Text style={[styles.inputText, !waktuKembali && styles.placeholderText]}>
+            {waktuKembali || "Waktu Pengembalian (HH:mm)"}
+          </Text>
+        </TouchableOpacity>
+        {errors.waktuKembali && <Text style={styles.errorText}>{errors.waktuKembali}</Text>}
+        
         <TextInput
-          style={styles.input}
-          placeholder="Tanggal Penyewaan (mm/dd/yy)"
-          placeholderTextColor="#eee"
-          value={tanggalSewa}
-          onChangeText={setTanggalSewa}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Tanggal Pengembalian (mm/dd/yy)"
-          placeholderTextColor="#eee"
-          value={tanggalKembali}
-          onChangeText={setTanggalKembali}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Waktu Pengembalian (07:15)"
-          placeholderTextColor="#eee"
-          value={waktuKembali}
-          onChangeText={setWaktuKembali}
-        />
-        <TextInput
-          style={styles.input}
+          style={[styles.input, errors.lokasi && styles.inputError]}
           placeholder="Lokasi Pengambilan"
           placeholderTextColor="#eee"
           value={lokasi}
-          onChangeText={setLokasi}
+          onChangeText={(t) => { setLokasi(t); setErrors({...errors, lokasi: ""}); }}
         />
+        {errors.lokasi && <Text style={styles.errorText}>{errors.lokasi}</Text>}
       </View>
 
       {/* DETAIL PEMBAYARAN */}
@@ -90,6 +121,42 @@ export default function BuatPesanan() {
           <Text style={styles.totalPrice}>Rp1.900.000</Text>
         </View>
       </View>
+
+      {/* Date Picker Modal untuk Tanggal Sewa */}
+      <DatePickerModal
+        isVisible={datePickerState.visible && datePickerState.type === "sewa"}
+        title="Pilih Tanggal Penyewaan"
+        onConfirm={(date) => {
+          setTanggalSewa(date);
+          setErrors({...errors, tanggalSewa: ""});
+          setDatePickerState({ visible: false, type: null });
+        }}
+        onCancel={() => setDatePickerState({ visible: false, type: null })}
+      />
+
+      {/* Date Picker Modal untuk Tanggal Kembali */}
+      <DatePickerModal
+        isVisible={datePickerState.visible && datePickerState.type === "kembali"}
+        title="Pilih Tanggal Pengembalian"
+        onConfirm={(date) => {
+          setTanggalKembali(date);
+          setErrors({...errors, tanggalKembali: ""});
+          setDatePickerState({ visible: false, type: null });
+        }}
+        onCancel={() => setDatePickerState({ visible: false, type: null })}
+      />
+
+      {/* Time Picker Modal untuk Waktu Kembali */}
+      <TimePickerModal
+        isVisible={timePickerVisible}
+        title="Pilih Waktu Pengembalian"
+        onConfirm={(time) => {
+          setWaktuKembali(time);
+          setErrors({...errors, waktuKembali: ""});
+          setTimePickerVisible(false);
+        }}
+        onCancel={() => setTimePickerVisible(false)}
+      />
     </ScrollView>
   );
 }
@@ -160,6 +227,28 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 14,
     marginBottom: 10,
+  },
+  touchableInput: {
+    justifyContent: "center",
+    paddingVertical: 12,
+  },
+  inputText: {
+    color: "white",
+    fontSize: 14,
+  },
+  placeholderText: {
+    color: "#eee",
+  },
+  inputError: {
+    borderBottomColor: "#ff6b6b",
+    borderBottomWidth: 2,
+  },
+  errorText: {
+    color: "#ff6b6b",
+    fontSize: 11,
+    marginTop: -8,
+    marginBottom: 6,
+    fontWeight: "600",
   },
   sectionTitle3: {
     alignSelf: "center",

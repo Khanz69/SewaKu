@@ -1,9 +1,11 @@
 // ProdukKuScreen.tsx
-import { productRepository } from "@/src/repositories/productRepository";
+import { useUserProducts } from "@/src/hooks/useUserProducts";
+import { deleteProductByResource } from "@/src/repositories/productRepository";
 import type { Product } from "@/src/types/product";
 import { router, useFocusEffect } from "expo-router";
-import React, { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   ImageBackground,
   StatusBar,
@@ -12,20 +14,30 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import CategoryFilter from "../../components/CategoryFilter";
 import DeleteConfirmModal from "../../components/DeleteConfirmModal";
 import ProductCard from "../../components/ProductCard";
 import ProductDetailModal from "../../components/ProductDetailModal";
 
 export default function ProdukKuScreen() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const {
+    products,
+    filteredProducts,
+    loading,
+    error,
+    selectedCategory,
+    setSelectedCategory,
+    reload,
+    filterOptions,
+  } = useUserProducts();
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   const askDelete = (id: string) => {
-    setPendingDelete(id); // Menyimpan id produk yang akan dihapus
-    setConfirmVisible(true); // Menampilkan modal konfirmasi
+    setPendingDelete(id);
+    setConfirmVisible(true);
   };
 
   const openDetail = (item: Product) => {
@@ -33,18 +45,7 @@ export default function ProdukKuScreen() {
     setIsDetailOpen(true);
   };
 
-  const closeDetail = () => {
-    setIsDetailOpen(false);
-  };
-
-  const loadProducts = useCallback(async () => {
-    try {
-      const items = await productRepository.getAll();
-      setProducts(items);
-    } catch (error) {
-      console.warn("Gagal memuat produk:", error);
-    }
-  }, []);
+  const closeDetail = () => setIsDetailOpen(false);
 
   const handleConfirmDelete = () => {
     if (!pendingDelete) {
@@ -52,11 +53,17 @@ export default function ProdukKuScreen() {
       return;
     }
 
+    const target = products.find((p) => p.id === pendingDelete);
     setConfirmVisible(false);
     setPendingDelete(null);
-    productRepository
-      .delete(pendingDelete)
-      .then(loadProducts)
+
+    if (!target?.resource) {
+      console.warn("Produk tidak memiliki resource untuk dihapus.");
+      return;
+    }
+
+    deleteProductByResource(target.resource, pendingDelete)
+      .then(reload)
       .catch((error) => console.warn("Gagal hapus produk:", error));
   };
 
@@ -67,8 +74,13 @@ export default function ProdukKuScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadProducts();
-    }, [loadProducts])
+      reload();
+    }, [reload])
+  );
+
+  const sortedProducts = useMemo(
+    () => [...filteredProducts].sort((a, b) => b.createdAt - a.createdAt),
+    [filteredProducts]
   );
 
   return (
@@ -82,30 +94,41 @@ export default function ProdukKuScreen() {
         <Text style={s.title}>ProduKu</Text>
         <TouchableOpacity
           style={s.addBtn}
-          onPress={() => router.push("/Produk/Tambah")}
+          onPress={() => router.push("/Produk/Kategori")}
         >
           <Text style={s.addBtnText}>Tambah Produk?</Text>
         </TouchableOpacity>
       </View>
-
-      <FlatList
-        data={[...products].sort((a, b) => b.createdAt - a.createdAt)}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={s.flatListContent}
-        renderItem={({ item }) => (
-          <ProductCard
-            item={item}
-            onPressEdit={() => router.push(`/Produk/Edit/${item.id}`)}
-            onRequestDelete={askDelete}
-            onPressDetail={() => openDetail(item)}
-          />
-        )}
-        ListEmptyComponent={
-          <View style={s.empty}>
-            <Text style={s.emptyText}>Belum ada produk. Yuk, tambah dulu!</Text>
-          </View>
-        }
+      <CategoryFilter
+        options={filterOptions}
+        selectedKey={selectedCategory}
+        onSelect={setSelectedCategory}
       />
+
+      {loading ? (
+        <ActivityIndicator size="large" color="#fff" style={s.loader} />
+      ) : error ? (
+        <Text style={s.errorText}>{error}</Text>
+      ) : (
+        <FlatList
+          data={sortedProducts}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={s.flatListContent}
+          renderItem={({ item }) => (
+            <ProductCard
+              item={item}
+              onPressEdit={() => router.push(`/Produk/Edit/${item.id}`)}
+              onRequestDelete={askDelete}
+              onPressDetail={() => openDetail(item)}
+            />
+          )}
+          ListEmptyComponent={
+            <View style={s.empty}>
+              <Text style={s.emptyText}>Belum ada produk. Yuk, tambah dulu!</Text>
+            </View>
+          }
+        />
+      )}
 
       {/* Modal detail produk */}
       <ProductDetailModal
@@ -131,9 +154,9 @@ const RED_PILL = "#A93226";
 const s = StyleSheet.create({
   wrap: { flex: 1, justifyContent: "flex-start", width: "100%", height: "110%" },
   header: {
-    paddingTop: 70,
+    paddingTop: 50,
     paddingHorizontal: 20,
-    paddingBottom: 15,
+    paddingBottom: 5,
     backgroundColor: "rgba(0,0,0,0)",
     alignItems: "center",
     zIndex: 1,
@@ -151,13 +174,13 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 25,
-    marginTop: 12,
+    marginTop: 5,
     marginRight: 120,
     borderWidth: 2,
     borderColor: RED_PILL,
   },
   addBtnText: { color: RED_PILL, fontWeight: "700", fontSize: 12 },
-  flatListContent: { padding: 16, paddingBottom: 24 },
+  flatListContent: { padding: 16, paddingBottom: 150 },
   empty: {
     marginTop: 40,
     backgroundColor: "rgba(255,255,255,0.3)",
@@ -166,4 +189,13 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
   },
   emptyText: { textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "500" },
+  loader: {
+    marginTop: 40,
+  },
+  errorText: {
+    marginTop: 24,
+    textAlign: "center",
+    color: "#fff",
+    fontSize: 14,
+  },
 });

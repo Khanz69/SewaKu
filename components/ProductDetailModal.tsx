@@ -1,6 +1,6 @@
 // components/ui/ProductDetailModal.tsx
 import type { Product } from "@/src/types/product";
-import React from "react";
+import { resolveProductImage } from "@/src/utils/productImage";
 import {
     Image,
     Modal,
@@ -19,6 +19,8 @@ type Props = {
 
 export default function ProductDetailModal({ visible, product, onClose }: Props) {
   if (!visible || !product) return null;
+
+  const heroImage = resolveProductImage(product.image);
 
   const rows: Array<{ label: string; value?: string | number }> = [
     { label: "Nama Produk", value: product.name },
@@ -43,8 +45,8 @@ export default function ProductDetailModal({ visible, product, onClose }: Props)
           </View>
 
           <ScrollView contentContainerStyle={s.content}>
-            {product.image ? (
-              <Image source={{ uri: product.image }} style={s.heroImg} />
+            {heroImage ? (
+              <Image source={heroImage} style={s.heroImg} />
             ) : (
               <View style={[s.heroImg, s.heroPlaceholder]} />
             )}

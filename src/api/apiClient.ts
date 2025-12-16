@@ -4,9 +4,6 @@ const BASE_URL = "https://x8ki-letl-twmt.n7.xano.io/api:4MMWlGal"; // Base URL X
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 // Interceptor respons untuk penanganan kesalahan sederhana

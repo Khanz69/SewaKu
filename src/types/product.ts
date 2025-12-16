@@ -1,3 +1,6 @@
+import type { ProductCategoryKey } from "@/src/constants/productCategories";
+import type { ProductImageField } from "@/src/utils/productImage";
+
 export type Transmission = "Manual" | "Automatic";
 export type CarType = "City Car" | "SUV" | "MPV" | "Sedan";
 
@@ -6,7 +9,7 @@ export interface Product {
   name: string;
   pricePerDay: number;     // harga per hari (angka)
   lokasi: string;
-  image?: string;
+  image?: ProductImageField;
   transmission?: Transmission;
   seats?: number;
   bagCapacity?: string;
@@ -14,4 +17,6 @@ export interface Product {
   plateNumber?: string;
   description?: string;
   createdAt: number;
+  resource?: string;
+  categoryKey?: ProductCategoryKey;
 }

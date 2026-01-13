@@ -1,0 +1,101 @@
+import { Responsive } from "@/src/constants/responsive";
+import { useMotor } from "@/src/hooks/useMotor";
+import { useNavigation } from "@react-navigation/native";
+import { useLayoutEffect } from "react";
+import { ActivityIndicator, Dimensions, ImageBackground, ScrollView, StyleSheet, Text, View } from "react-native";
+import { CarCard } from "../../components/CarCard";
+import { CarTypeFilter } from "../../components/CarTypeFilter";
+import { SearchBar } from "../../components/SearchBar";
+
+const { height } = Dimensions.get("window");
+
+export default function Motor() {
+  const navigation = useNavigation();
+  const {
+    selectedType,
+    setSelectedType,
+    search,
+    setSearch,
+    carTypes,
+    filteredCars,
+    loading,
+    error,
+  } = useMotor();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
+
+  const handleBackPress = () => {
+    navigation.goBack();
+  };
+
+  const getResponsivePaddingTop = () => {
+    if (height < 700) return 8;
+    if (height < 800) return 12;
+    if (height < 900) return 16;
+    return 20;
+  };
+
+  return (
+    <ImageBackground
+      source={require("../../assets/images/Jenismobilbg.png")}
+      style={styles.background}
+      resizeMode="stretch"
+    >
+      <View style={[styles.screenContainer, { paddingTop: getResponsivePaddingTop() }]}>
+        <View style={styles.fixedHeader}>
+          <SearchBar value={search} onChangeText={setSearch} onBackPress={handleBackPress} />
+          <CarTypeFilter
+            carTypes={carTypes}
+            selectedType={selectedType}
+            onSelect={setSelectedType}
+          />
+        </View>
+        <ScrollView style={styles.scrollArea} contentContainerStyle={styles.listContainer}>
+          {loading ? (
+            <ActivityIndicator size="large" color="#fff" />
+          ) : error ? (
+            <Text style={styles.messageText}>{error}</Text>
+          ) : filteredCars.length === 0 ? (
+            <Text style={styles.messageText}>Motor tidak tersedia di saat ini.</Text>
+          ) : (
+            filteredCars.map((motor, index) => (
+              <CarCard key={`${motor.code ?? motor.name}-${index}`} car={motor} />
+            ))
+          )}
+        </ScrollView>
+      </View>
+    </ImageBackground>
+  );
+}
+
+const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  screenContainer: {
+    flex: 1,
+    padding: Responsive.containerPadding.horizontal,
+  },
+  fixedHeader: {
+    marginBottom: Responsive.spacing.md,
+  },
+  scrollArea: {
+    flex: 1,
+  },
+  listContainer: {
+    marginTop: 0,
+    paddingBottom: 100,
+  },
+  messageText: {
+    color: "#fff",
+    textAlign: "center",
+    marginTop: Responsive.spacing.lg,
+    fontSize: Responsive.fontSize.lg,
+  },
+});

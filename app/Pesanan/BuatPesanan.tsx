@@ -1,8 +1,7 @@
 import DatePickerModal from "@/components/DatePickerModal";
 import TimePickerModal from "@/components/TimePickerModal";
-import { Responsive } from "@/src/constants/responsive";
 import { productRepository } from "@/src/repositories/productRepository";
-import type { Product } from "@/src/types/product";
+import type { Product, ProductCategoryKey } from "@/src/types/product";
 import { resolveProductImage } from "@/src/utils/productImage";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -18,6 +17,16 @@ import {
 } from "react-native";
 import Modal from "react-native-modal";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const parseDateString = (value: string): Date | null => {
+  const parts = value.split("/").map(Number);
+  if (parts.length !== 3) return null;
+  const [d, m, y] = parts;
+  const date = new Date(y, m - 1, d);
+  return Number.isFinite(date.getTime()) ? date : null;
+};
+
 export default function BuatPesanan() {
   const params = useLocalSearchParams<{
     id?: string;
@@ -28,450 +37,363 @@ export default function BuatPesanan() {
     plateNumber?: string;
   }>();
 
+  const router = useRouter();
+
   const [tanggalSewa, setTanggalSewa] = useState("");
   const [tanggalKembali, setTanggalKembali] = useState("");
+  const [waktuAmbil, setWaktuAmbil] = useState("");
   const [waktuKembali, setWaktuKembali] = useState("");
   const [lokasi, setLokasi] = useState("");
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [remoteProduct, setRemoteProduct] = useState<Product | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [datePickerState, setDatePickerState] = useState<{
+  const [modal, setModal] = useState(false);
+  const [agreeTnc, setAgreeTnc] = useState(false);
+
+  const [datePicker, setDatePicker] = useState<{
     visible: boolean;
     type: "sewa" | "kembali" | null;
   }>({ visible: false, type: null });
-  const [timePickerVisible, setTimePickerVisible] = useState(false);
-  const toggleModal = () => setModalVisible(!isModalVisible);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!tanggalSewa.trim()) newErrors.tanggalSewa = "Tanggal sewa wajib diisi";
-    if (!tanggalKembali.trim()) newErrors.tanggalKembali = "Tanggal kembali wajib diisi";
-    if (!waktuKembali.trim()) newErrors.waktuKembali = "Waktu kembali wajib diisi";
-    if (!lokasi.trim()) newErrors.lokasi = "Lokasi pengambilan wajib diisi";
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const router = useRouter();
+  const [timePicker, setTimePicker] = useState(false);
+  const [remoteProduct, setRemoteProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     if (!params.id) return;
-    let mounted = true;
-
-    productRepository
-      .getById(params.id)
-      .then((item) => {
-        if (mounted) {
-          setRemoteProduct(item);
-        }
-      })
-      .catch((error) => console.warn("Gagal ambil produk untuk pesanan:", error));
-
-    return () => {
-      mounted = false;
-    };
+    productRepository.getById(params.id).then(setRemoteProduct).catch(() => {});
   }, [params.id]);
 
   const fallbackProduct = useMemo<Product>(() => {
-    const priceValue = params.pricePerDay ?? params.price ?? "0";
-    const numericPrice = Number(priceValue);
-
+    const price = Number(params.pricePerDay ?? params.price ?? 0);
     return {
       id: params.id ?? "",
-      name: params.name ?? "Detail Produk",
-      pricePerDay: Number.isFinite(numericPrice) ? numericPrice : 0,
+      name: params.name ?? "",
+      pricePerDay: Number.isFinite(price) ? price : 0,
       lokasi: params.location ?? "",
       plateNumber: params.plateNumber,
+      categoryKey: "" as ProductCategoryKey,
       createdAt: Date.now(),
     };
-  }, [params.id, params.name, params.pricePerDay, params.price, params.location, params.plateNumber]);
+  }, [params]);
 
-  const displayedProduct = remoteProduct ?? fallbackProduct;
-  const carImageSource = resolveProductImage(displayedProduct.image);
+  const product = remoteProduct ?? fallbackProduct;
+  const image = resolveProductImage(product.image);
 
-  // Fungsi untuk kembali ke halaman sebelumnya
-  const handleBackPress = () => {
-    router.back(); // Menggunakan router.back() untuk navigasi mundur
-  };
+  const rentalDays = useMemo(() => {
+    const a = parseDateString(tanggalSewa);
+    const b = parseDateString(tanggalKembali);
+    if (!a || !b) return 0;
+    const diff = b.getTime() - a.getTime();
+    if (diff < 0) return 0;
+    return Math.floor(diff / DAY_MS) + 1;
+  }, [tanggalSewa, tanggalKembali]);
+
+  const totalPrice = rentalDays * product.pricePerDay;
+
+  const isDetailComplete =
+    tanggalSewa &&
+    tanggalKembali &&
+    waktuAmbil &&
+    waktuKembali &&
+    lokasi.trim().length > 0;
 
   return (
-    <ScrollView style={styles.container}>
-      {/* PRODUK */}
-      <View style={styles.productContainer}>
-        {/* Tombol Back sejajar dengan judul */}
-        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1b1515ff" />
+    <ScrollView
+      style={styles.scrollArea}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.whiteCard}>
+        <TouchableOpacity style={styles.back} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={22} color="#111" />
         </TouchableOpacity>
-        <Text style={styles.sectionTitle}>Produk</Text>
-        <View style={styles.productCard}>
-          {carImageSource ? (
-            <Image source={carImageSource} style={styles.carImage} />
+
+        <Text style={styles.pill}>Produk</Text>
+
+        <View style={styles.productRow}>
+          {image ? (
+            <Image source={image} style={styles.carImage} />
           ) : (
-            <View style={[styles.carImage, styles.emptyImage]} />
+            <View style={[styles.carImage, { backgroundColor: "#eee" }]} />
           )}
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.carName}>{displayedProduct.name}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.carName}>{product.name}</Text>
             <Text style={styles.carInfo}>
-              Plat Nomor: {displayedProduct.plateNumber ?? "-"}
+              Plat: {product.plateNumber ?? "-"}
             </Text>
             <Text style={styles.carPrice}>
-              Harga Sewa: Rp{displayedProduct.pricePerDay.toLocaleString("id-ID")} /hari
+              Rp{product.pricePerDay.toLocaleString("id-ID")}/hari
             </Text>
             <Text style={styles.carInfo}>
-              Lokasi: {displayedProduct.lokasi || "-"}
+              Lokasi: {product.lokasi || "-"}
             </Text>
           </View>
         </View>
       </View>
 
-      {/* DETAIL PENYEWAAN */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Detail Penyewaan</Text>
-        
+      <View style={styles.redCard}>
+        <Text style={styles.pill}>Detail Penyewaan</Text>
+
         <TouchableOpacity
-          style={[styles.input, styles.touchableInput, errors.tanggalSewa && styles.inputError]}
-          onPress={() => setDatePickerState({ visible: true, type: "sewa" })}
+          style={styles.rowInput}
+          onPress={() => setDatePicker({ visible: true, type: "sewa" })}
         >
-          <Text style={[styles.inputText, !tanggalSewa && styles.placeholderText]}>
-            {tanggalSewa || "Tanggal Penyewaan (dd/mm/yyyy)"}
+          <Text style={styles.rowText}>
+            {tanggalSewa || "Tanggal Penyewaan"}
           </Text>
+          <Ionicons name="calendar-outline" size={18} color="#fff" />
         </TouchableOpacity>
-        {errors.tanggalSewa && <Text style={styles.errorText}>{errors.tanggalSewa}</Text>}
-        
+
         <TouchableOpacity
-          style={[styles.input, styles.touchableInput, errors.tanggalKembali && styles.inputError]}
-          onPress={() => setDatePickerState({ visible: true, type: "kembali" })}
+          style={styles.rowInput}
+          onPress={() => setDatePicker({ visible: true, type: "kembali" })}
         >
-          <Text style={[styles.inputText, !tanggalKembali && styles.placeholderText]}>
-            {tanggalKembali || "Tanggal Pengembalian (dd/mm/yyyy)"}
+          <Text style={styles.rowText}>
+            {tanggalKembali || "Tanggal Pengembalian"}
           </Text>
+          <Ionicons name="calendar-outline" size={18} color="#fff" />
         </TouchableOpacity>
-        {errors.tanggalKembali && <Text style={styles.errorText}>{errors.tanggalKembali}</Text>}
-        
+
         <TouchableOpacity
-          style={[styles.input, styles.touchableInput, errors.waktuKembali && styles.inputError]}
-          onPress={() => setTimePickerVisible(true)}
+          style={styles.rowInput}
+          onPress={() => setTimePicker(true)}
         >
-          <Text style={[styles.inputText, !waktuKembali && styles.placeholderText]}>
-            {waktuKembali || "Waktu Pengembalian (HH:mm)"}
+          <Text style={styles.rowText}>
+            {waktuAmbil || "Waktu Pengambilan"}
           </Text>
+          <Ionicons name="time-outline" size={18} color="#fff" />
         </TouchableOpacity>
-        {errors.waktuKembali && <Text style={styles.errorText}>{errors.waktuKembali}</Text>}
-        
+
+        <TouchableOpacity
+          style={styles.rowInput}
+          onPress={() => setTimePicker(true)}
+        >
+          <Text style={styles.rowText}>
+            {waktuKembali || "Waktu Pengembalian"}
+          </Text>
+          <Ionicons name="time-outline" size={18} color="#fff" />
+        </TouchableOpacity>
+
         <TextInput
-          style={[styles.input, errors.lokasi && styles.inputError]}
+          style={styles.textInput}
           placeholder="Lokasi Pengambilan"
-          placeholderTextColor="#eee"
+          placeholderTextColor="#f1f1f1"
           value={lokasi}
-          onChangeText={(t) => { setLokasi(t); setErrors({...errors, lokasi: ""}); }}
+          onChangeText={setLokasi}
         />
-        {errors.lokasi && <Text style={styles.errorText}>{errors.lokasi}</Text>}
       </View>
 
-      {/* DETAIL PEMBAYARAN */}
-      <Text style={styles.sectionTitle3}>Detail Pembayaran</Text>
-      <View style={styles.paymentSection}>
-        <View style={styles.paymentCard}>
-          <Text style={styles.totalText}>Total Keseluruhan:</Text>
-          <Text style={styles.totalPrice}>Rp1.900.000</Text>
+      <View style={styles.whiteCard}>
+        <Text style={styles.pill}>Detail Pembayaran</Text>
+
+        <TouchableOpacity style={[styles.radioRow, styles.disabledOption]} disabled>
+          <Text style={styles.radioLabel}>QRIS</Text>
+          <View style={styles.radio} />
+        </TouchableOpacity>
+        <Text style={styles.disabledNotice}>Sedang dalam pengembangan</Text>
+
+        <TouchableOpacity style={[styles.radioRow, styles.disabledOption]} disabled>
+          <Text style={styles.radioLabel}>Transfer Bank</Text>
+          <View style={styles.radio} />
+        </TouchableOpacity>
+        <Text style={styles.disabledNotice}>Sedang dalam pengembangan</Text>
+
+        <View style={styles.radioRow}>
+          <Text style={styles.radioLabelActive}>COD (Cash on Delivery)</Text>
+          <View style={styles.radioActive} />
         </View>
 
-        <TouchableOpacity 
-          style={styles.button} 
-          onPress={() => {
-            if (validateForm()) {
-              toggleModal();
-            }
-          }}
-        >
-          <Text style={styles.buttonText}>Buat Pesanan</Text>
-        </TouchableOpacity>
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>Total Pesanan</Text>
+          <Text style={styles.totalValue}>
+            Rp{totalPrice.toLocaleString("id-ID")}
+          </Text>
+        </View>
+        <Text style={styles.dayCount}>
+          Total Hari: {rentalDays > 0 ? `${rentalDays} hari` : "-"}
+        </Text>
       </View>
 
-      {/* 🔻 MODAL (BOTTOM SHEET) */}
-      <Modal
-        isVisible={isModalVisible}
-        onBackdropPress={toggleModal}
-        style={styles.modalContainer}
+      <TouchableOpacity
+        style={[
+          styles.submit,
+          !isDetailComplete && { opacity: 0.5 },
+        ]}
+        disabled={!isDetailComplete}
+        onPress={() => setModal(true)}
       >
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Formulir Penyewaan</Text>
+        <Text style={styles.submitText}>Buat Pesanan</Text>
+      </TouchableOpacity>
 
-          <View style={styles.modalInnerBox}>
-            <Text style={styles.modalLabel}>Masukkan Foto KTP Asli</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="KTP.jpg"
-              placeholderTextColor="#eee"
-            />
+      <Modal isVisible={modal} onBackdropPress={() => setModal(false)}>
+        <View style={styles.modal}>
+          <Text style={styles.pill}>Formulir Penyewaan</Text>
 
-            <Text style={styles.modalLabel}>Masukkan Foto SIM Asli</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="SIM.jpg"
-              placeholderTextColor="#eee"
-            />
+          <TextInput style={styles.modalInput} placeholder="Foto KTP" />
+          <TextInput style={styles.modalInput} placeholder="Foto SIM" />
+          <TextInput style={styles.modalInput} placeholder="No HP" />
 
-            <Text style={styles.modalLabel}>Nomor yang Dapat Dihubungi</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="08xxxxxx"
-              placeholderTextColor="#eee"
-            />
+          <TouchableOpacity
+            style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}
+            onPress={() => setAgreeTnc(!agreeTnc)}
+          >
+            <View style={styles.checkbox}>
+              {agreeTnc && <View style={styles.checkboxInner} />}
+            </View>
+            <Text>Syarat dan Ketentuan</Text>
+          </TouchableOpacity>
 
-            {/* ✅ tambahan kecil agar modal tertutup dulu sebelum pindah halaman */}
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => {
-                setModalVisible(false); // tutup modal dulu
-                setTimeout(() => {
-                  router.push("/(tabs)/PesananKu"); // baru pindah halaman
-                }, 300); // jeda 0.3 detik biar animasi sempat jalan
-              }}
-            >
-              <Text style={styles.modalButtonText}>Kirim Formulir</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[
+              styles.submit,
+              !agreeTnc && { opacity: 0.5 },
+            ]}
+            disabled={!agreeTnc}
+            onPress={() => {
+              setModal(false);
+              router.push("/(tabs)/PesananKu");
+            }}
+          >
+            <Text style={styles.submitText}>Kirim Formulir</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
 
-      {/* Date Picker Modal untuk Tanggal Sewa */}
       <DatePickerModal
-        isVisible={datePickerState.visible && datePickerState.type === "sewa"}
-        title="Pilih Tanggal Penyewaan"
-        onConfirm={(date) => {
-          setTanggalSewa(date);
-          setErrors({...errors, tanggalSewa: ""});
-          setDatePickerState({ visible: false, type: null });
+        isVisible={datePicker.visible && datePicker.type === "sewa"}
+        title="Tanggal Penyewaan"
+        onConfirm={(d) => {
+          setTanggalSewa(d);
+          setDatePicker({ visible: false, type: null });
         }}
-        onCancel={() => setDatePickerState({ visible: false, type: null })}
+        onCancel={() => setDatePicker({ visible: false, type: null })}
       />
 
-      {/* Date Picker Modal untuk Tanggal Kembali */}
       <DatePickerModal
-        isVisible={datePickerState.visible && datePickerState.type === "kembali"}
-        title="Pilih Tanggal Pengembalian"
-        onConfirm={(date) => {
-          setTanggalKembali(date);
-          setErrors({...errors, tanggalKembali: ""});
-          setDatePickerState({ visible: false, type: null });
+        isVisible={datePicker.visible && datePicker.type === "kembali"}
+        title="Tanggal Pengembalian"
+        onConfirm={(d) => {
+          setTanggalKembali(d);
+          setDatePicker({ visible: false, type: null });
         }}
-        onCancel={() => setDatePickerState({ visible: false, type: null })}
+        onCancel={() => setDatePicker({ visible: false, type: null })}
       />
 
-      {/* Time Picker Modal untuk Waktu Kembali */}
       <TimePickerModal
-        isVisible={timePickerVisible}
-        title="Pilih Waktu Pengembalian"
-        onConfirm={(time) => {
-          setWaktuKembali(time);
-          setErrors({...errors, waktuKembali: ""});
-          setTimePickerVisible(false);
+        isVisible={timePicker}
+        title={!waktuAmbil ? "Waktu Pengambilan" : "Waktu Pengembalian"}
+        onConfirm={(t) => {
+          if (!waktuAmbil) setWaktuAmbil(t);
+          else setWaktuKembali(t);
+          setTimePicker(false);
         }}
-        onCancel={() => setTimePickerVisible(false)}
+        onCancel={() => setTimePicker(false)}
       />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#C0342F",
-    padding: Responsive.containerPadding.horizontal,
-    paddingTop: Responsive.spacing.xxxl,
-  },
-  productContainer: {
-    backgroundColor: "white",
-    borderRadius: Responsive.borderRadius.lg,
-    padding: Responsive.spacing.sm,
-    marginBottom: Responsive.spacing.xl,
-  },
-  backButton: {
-    position: "absolute", 
-    left: Responsive.spacing.lg,
-    top: Responsive.spacing.sm,
-    borderRadius: Responsive.borderRadius.full,
-    padding: Responsive.spacing.sm,
-  },
-  productCard: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  carImage: {
-    width: Responsive.size(100),
-    height: Responsive.size(60),
-    borderRadius: Responsive.borderRadius.md,
-  },
-  emptyImage: {
-    backgroundColor: "#eee",
-  },
-  carName: {
-    fontFamily: "SFBold",
-    fontSize: Responsive.fontSize.lg,
-  },
-  carInfo: {
-    fontSize: Responsive.fontSize.xs,
-    color: "#555",
-  },
-  carPrice: {
-    fontSize: Responsive.fontSize.sm,
-    color: "#1A1A8D",
-    fontFamily: "SFMedium",
-  },
-  section: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: Responsive.borderRadius.lg,
-    padding: Responsive.spacing.lg,
-    marginBottom: Responsive.spacing.md,
-  },
-  sectionTitle: {
+  scrollArea: { flex: 1, backgroundColor: "#C0342F" },
+  scrollContent: { padding: 16, paddingBottom: 160 },
+  back: { position: "absolute", left: 10, top: 10 },
+  pill: {
     alignSelf: "center",
-    textAlign: "center",
-    backgroundColor: "#C0342F",
-    color: "white",
-    fontWeight: "600",
-    paddingHorizontal: Responsive.spacing.xxxl,
-    paddingVertical: Responsive.spacing.xs,
-    borderRadius: Responsive.borderRadius.lg,
-    marginBottom: Responsive.spacing.md,
-  },
-  input: {
-    borderBottomWidth: 1,
-    borderBottomColor: "white",
-    paddingVertical: Responsive.spacing.sm,
-    color: "white",
-    fontSize: Responsive.fontSize.md,
-    marginBottom: Responsive.spacing.md,
-  },
-  touchableInput: {
-    justifyContent: "center",
-    paddingVertical: Responsive.spacing.md,
-  },
-  inputText: {
-    color: "white",
-    fontSize: Responsive.fontSize.md,
-  },
-  placeholderText: {
-    color: "#eee",
-  },
-  inputError: {
-    borderBottomColor: "#ff6b6b",
-    borderBottomWidth: 2,
-  },
-  errorText: {
-    color: "#ff6b6b",
-    fontSize: Responsive.fontSize.sm,
-    marginTop: -Responsive.spacing.sm,
-    marginBottom: Responsive.spacing.sm,
+    backgroundColor: "#B12A26",
+    color: "#fff",
+    paddingHorizontal: 24,
+    paddingVertical: 4,
+    borderRadius: 20,
+    marginBottom: 12,
     fontWeight: "600",
   },
-  sectionTitle3: {
-    alignSelf: "center",
-    backgroundColor: "#C0342F",
-    color: "white",
-    fontFamily: "SFMedium",
-    paddingHorizontal: Responsive.spacing.xxxl,
-    paddingVertical: Responsive.spacing.xs,
-    borderRadius: Responsive.borderRadius.lg,
-    marginTop: Responsive.spacing.sm,
-    marginBottom: -Responsive.spacing.md,
-    zIndex: 1,
-    elevation: 2,
+  whiteCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
   },
-  paymentSection: {
-    backgroundColor: "transparent",
+  redCard: {
+    backgroundColor: "#CF5757",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
   },
-  paymentCard: {
+  productRow: { flexDirection: "row", gap: 12 },
+  carImage: { width: 90, height: 55, borderRadius: 8 },
+  carName: { fontWeight: "700" },
+  carInfo: { fontSize: 12, color: "#555" },
+  carPrice: { fontWeight: "600", color: "#1A1A8D" },
+  rowInput: {
     flexDirection: "row",
-    height: Responsive.size(70),
     justifyContent: "space-between",
-    backgroundColor: "white",
-    borderRadius: Responsive.borderRadius.lg,
-    padding: Responsive.spacing.lg,
-    marginBottom: Responsive.spacing.md,
-  },
-  totalText: {
-    fontWeight: "600",
-    color: "#333",
-    paddingTop: Responsive.spacing.md,
-  },
-  totalPrice: {
-    fontWeight: "700",
-    color: "#000",
-    paddingTop: Responsive.spacing.md,
-  },
-  button: {
-    backgroundColor: "#34A853",
-    paddingVertical: Responsive.spacing.md,
-    borderRadius: Responsive.borderRadius.full,
-    alignSelf: "center",
-    width: Responsive.size(160),
-    height: Responsive.size(35),
-    marginTop: -Responsive.spacing.xl - 5,
-    zIndex: 1,
-    elevation: 2,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "white",
-    fontFamily: "SFMedium",
-    textAlign: "center",
-  },
-
-  // 🔻 Modal Styles
-  modalContainer: {
-    justifyContent: "flex-end",
-    margin: 0,
-  },
-  modalContent: {
-    backgroundColor: "white",
-    borderTopLeftRadius: Responsive.borderRadius.xl,
-    borderTopRightRadius: Responsive.borderRadius.xl,
-    padding: Responsive.spacing.lg,
-  },
-  modalTitle: {
-    alignSelf: "center",
-    backgroundColor: "#C0342F",
-    color: "white",
-    fontWeight: "600",
-    paddingHorizontal: Responsive.spacing.xxxl,
-    paddingVertical: Responsive.spacing.xs,
-    borderRadius: Responsive.borderRadius.lg,
-    marginBottom: Responsive.spacing.lg,
-  },
-  modalInnerBox: {
-    backgroundColor: "rgba(207, 87, 87, 1)",
-    borderRadius: Responsive.borderRadius.lg,
-    padding: Responsive.spacing.lg,
-  },
-  modalLabel: {
-    color: "white",
-    marginBottom: Responsive.spacing.xs,
-  },
-  modalInput: {
     borderBottomWidth: 1,
-    borderBottomColor: "white",
-    color: "white",
-    marginBottom: Responsive.spacing.lg,
-    paddingVertical: Responsive.spacing.xs,
+    borderBottomColor: "#fff",
+    paddingVertical: 12,
+    marginBottom: 12,
   },
-  modalButton: {
+  rowText: { color: "#fff" },
+  textInput: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#fff",
+    color: "#fff",
+    paddingVertical: 10,
+  },
+  radioRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 10,
+  },
+  radioLabel: { fontWeight: "600" },
+  radioLabelActive: { fontWeight: "600", color: "#000" },
+  radio: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 1,
+  },
+  radioActive: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#000",
+  },
+  disabledOption: { opacity: 0.5 },
+  disabledNotice: {
+    color: "#8b8b8b",
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 6,
+    marginLeft: 8,
+  },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
+  totalLabel: { fontWeight: "600" },
+  totalValue: { fontWeight: "700", color: "#1A1A8D" },
+  dayCount: {
+    textAlign: "right",
+    color: "#555",
+    fontSize: 12,
+    marginTop: 4,
+  },
+  submit: {
     backgroundColor: "#34A853",
-    paddingVertical: Responsive.spacing.md,
-    borderRadius: Responsive.borderRadius.full,
-    marginTop: Responsive.spacing.md,
-    width: Responsive.size(150),
     alignSelf: "center",
-    justifyContent: "center",
+    paddingHorizontal: 40,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginBottom: 30,
+  },
+  submitText: { color: "#fff", fontWeight: "600" },
+  modal: { backgroundColor: "#fff", borderRadius: 16, padding: 20 },
+  modalInput: { borderBottomWidth: 1, marginBottom: 16 },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderWidth: 1,
+    marginRight: 10,
     alignItems: "center",
+    justifyContent: "center",
   },
-  modalButtonText: {
-    color: "white",
-    textAlign: "center",
-    fontWeight: "600",
-  },
+  checkboxInner: { width: 10, height: 10, backgroundColor: "#333" },
 });

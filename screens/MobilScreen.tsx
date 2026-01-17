@@ -2,19 +2,26 @@ import { Responsive } from "@/src/constants/responsive";
 import { useMobil } from "@/src/hooks/useMobil";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useCallback, useRef } from "react";
-import { ActivityIndicator, Dimensions, ImageBackground, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Dimensions,
+  ImageBackground,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { CarCard } from "../components/CarCard";
 import { CarTypeFilter } from "../components/CarTypeFilter";
 import { SearchBar } from "../components/SearchBar";
 
 const { height } = Dimensions.get("window");
 
-// Hitung padding top responsif berdasarkan tinggi screen
 const getResponsivePaddingTop = () => {
-  if (height < 700) return 8;      // Screen kecil (< 700px)
-  if (height < 800) return 12;     // Screen medium (700-800px)
-  if (height < 900) return 16;     // Screen besar (800-900px)
-  return 20;                        // Screen sangat besar (> 900px)
+  if (height < 700) return 8;
+  if (height < 800) return 12;
+  if (height < 900) return 16;
+  return 20;
 };
 
 export default function MobilScreen() {
@@ -29,7 +36,8 @@ export default function MobilScreen() {
     error,
     reload,
   } = useMobil();
-  const navigation = useNavigation(); // Inisialisasi navigasi
+
+  const navigation = useNavigation();
   const firstFocusRef = useRef(true);
 
   useFocusEffect(
@@ -42,9 +50,8 @@ export default function MobilScreen() {
     }, [reload])
   );
 
-  // Fungsi untuk kembali ke halaman sebelumnya
   const handleBackPress = () => {
-    navigation.goBack();  // Navigasi mundur ke halaman sebelumnya
+    navigation.goBack();
   };
 
   return (
@@ -53,25 +60,46 @@ export default function MobilScreen() {
       style={styles.background}
       resizeMode="stretch"
     >
-      <View style={[styles.screenContainer, { paddingTop: getResponsivePaddingTop() }]}>
+      <View
+        style={[
+          styles.screenContainer,
+          { paddingTop: getResponsivePaddingTop() },
+        ]}
+      >
+        {/* HEADER FIX */}
         <View style={styles.fixedHeader}>
-          <SearchBar value={search} onChangeText={setSearch} onBackPress={handleBackPress} />
+          <SearchBar
+            value={search}
+            onChangeText={setSearch}
+            onBackPress={handleBackPress}
+          />
           <CarTypeFilter
             carTypes={carTypes}
             selectedType={selectedType}
             onSelect={setSelectedType}
           />
         </View>
-        <ScrollView style={styles.scrollArea} contentContainerStyle={styles.listContainer}>
+
+        {/* SCROLL AREA – disamakan dengan ProdukKu */}
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+        >
           {loading ? (
             <ActivityIndicator size="large" color="#fff" />
           ) : error ? (
             <Text style={styles.messageText}>{error}</Text>
           ) : filteredCars.length === 0 ? (
-            <Text style={styles.messageText}>Data mobil tidak tersedia di saat ini.</Text>
+            <Text style={styles.messageText}>
+              Data mobil tidak tersedia di saat ini.
+            </Text>
           ) : (
             filteredCars.map((car, index) => (
-              <CarCard key={`${car.code ?? car.name}-${index}`} car={car} />
+              <CarCard
+                key={`${car.code ?? car.name}-${index}`}
+                car={car}
+              />
             ))
           )}
         </ScrollView>
@@ -97,8 +125,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContainer: {
-    marginTop: 0,
-    paddingBottom: 100,
+    paddingBottom: 160, // konsisten dengan ProdukKu
   },
   messageText: {
     color: "#fff",

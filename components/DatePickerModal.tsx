@@ -21,6 +21,7 @@ export default function DatePickerModal({
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
   const [displayMonth, setDisplayMonth] = useState<Date>(new Date(today.getFullYear(), today.getMonth(), 1));
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   const formatDate = (date: Date) => {
     if (!(date instanceof Date) || isNaN(date.getTime())) {
@@ -63,7 +64,7 @@ export default function DatePickerModal({
     return days;
   };
 
-  const handleSelectDay = (day: number) => {
+    const handleSelectDay = (day: number) => {
     if (!(displayMonth instanceof Date)) return;
     const newDate = new Date(displayMonth.getFullYear(), displayMonth.getMonth(), day);
     setSelectedDate(newDate);
@@ -91,8 +92,15 @@ export default function DatePickerModal({
       })
     : "";
 
+  const isDayInPast = (day: number | null) => {
+    if (!day || !(displayMonth instanceof Date)) return false;
+    const candidate = new Date(displayMonth.getFullYear(), displayMonth.getMonth(), day);
+    return candidate < startOfToday;
+  };
+
   const isSelectedDay = (day: number | null) => {
     if (!day || !(selectedDate instanceof Date) || !(displayMonth instanceof Date)) return false;
+
     return (
       day === selectedDate.getDate() &&
       displayMonth.getMonth() === selectedDate.getMonth() &&
@@ -137,15 +145,17 @@ export default function DatePickerModal({
                   s.dayCell,
                   day === null && s.emptyCellc,
                   isSelectedDay(day) && s.selectedDayCell,
+                  isDayInPast(day) && s.pastDayCell,
                 ]}
-                onPress={() => day && handleSelectDay(day)}
-                disabled={!day}
+                onPress={() => day && !isDayInPast(day) && handleSelectDay(day)}
+                disabled={!day || isDayInPast(day)}
               >
                 <Text
                   style={[
                     s.dayText,
                     day === null && s.emptyDayText,
                     isSelectedDay(day) && s.selectedDayText,
+                    isDayInPast(day) && s.pastDayText,
                   ]}
                 >
                   {day}
@@ -241,6 +251,9 @@ const s = StyleSheet.create({
   emptyCellc: {
     backgroundColor: "transparent",
   },
+  pastDayCell: {
+    backgroundColor: "transparent",
+  },
   dayText: {
     fontSize: Responsive.fontSize.md,
     fontWeight: "600",
@@ -255,6 +268,9 @@ const s = StyleSheet.create({
   selectedDayText: {
     color: "#fff",
     fontWeight: "700",
+  },
+  pastDayText: {
+    color: "#9ca3af",
   },
   selectedDisplay: {
     backgroundColor: "#f3f4f6",

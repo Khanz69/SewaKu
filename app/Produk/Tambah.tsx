@@ -1,12 +1,11 @@
 import type { ProductCategoryKey } from "@/src/constants/productCategories";
-import { PRODUCT_CATEGORIES, findCategoryByKey } from "@/src/constants/productCategories";
+import { findCategoryByKey } from "@/src/constants/productCategories";
 import { CreateProductPayload, productRepository } from "@/src/repositories/productRepository";
 import type { Product } from "@/src/types/product";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import CategoryFilter from "../../components/CategoryFilter";
 import ProductForm from "../../components/ProductForm";
 
 export default function TambahProduk() {
@@ -37,7 +36,7 @@ export default function TambahProduk() {
       transmission: draft.transmission,
       seats: draft.seats,
       bagCapacity: draft.bagCapacity,
-      carType: draft.carType,
+      subCategory: draft.subCategory,
       plateNumber: draft.plateNumber,
       description: draft.description,
       categoryKey: selectedCategory.key,
@@ -65,22 +64,12 @@ export default function TambahProduk() {
         </TouchableOpacity>
         <Text style={s.h1}>Tambah Produk</Text>
 
-        <CategoryFilter
-          options={PRODUCT_CATEGORIES.map((cat) => ({ key: cat.key, label: cat.label }))}
-          selectedKey={selectedCategory.key}
-          onSelect={(key) => {
-            const next = PRODUCT_CATEGORIES.find((cat) => cat.key === key);
-            if (next) {
-              setSelectedCategory(next);
-            }
-          }}
-        />
         <Text style={s.categoryLabel}>Kategori: {selectedCategory.label}</Text>
 
         <ProductForm
           value={draft}
           onChange={setDraft}
-          carTypeOptions={selectedCategory.carTypeOptions}
+          subCategoryOptions={selectedCategory.subCategoryOptions}
         />
 
         <TouchableOpacity style={s.btn} onPress={submit} disabled={submitting}>

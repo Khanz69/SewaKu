@@ -1,7 +1,8 @@
+import { ProductCategoryKey } from "@/src/constants/productCategories";
 import { Responsive } from "@/src/constants/responsive";
-import { useMotor } from "@/src/hooks/useMotor";
-import { useNavigation } from "@react-navigation/native";
-import { useLayoutEffect } from "react";
+import { useCategoryProducts } from "@/src/hooks/useCategoryProducts";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import { ActivityIndicator, Dimensions, ImageBackground, ScrollView, StyleSheet, Text, View } from "react-native";
 import { CarCard } from "../../components/CarCard";
 import { CarTypeFilter } from "../../components/CarTypeFilter";
@@ -9,8 +10,12 @@ import { SearchBar } from "../../components/SearchBar";
 
 const { height } = Dimensions.get("window");
 
+const CATEGORY_KEY: ProductCategoryKey = "motor";
+const CATEGORY_CAR_TYPES = ["Sports", "Skuter", "Touring", "Cruiser", "Matic"];
+
 export default function Motor() {
   const navigation = useNavigation();
+  const focusRef = useRef(true);
   const {
     selectedType,
     setSelectedType,
@@ -20,13 +25,28 @@ export default function Motor() {
     filteredCars,
     loading,
     error,
-  } = useMotor();
+    reload,
+  } = useCategoryProducts({
+    categoryKey: CATEGORY_KEY,
+    carTypes: CATEGORY_CAR_TYPES,
+    emptyMessage: "Motor tidak tersedia di saat ini.",
+  });
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: false,
     });
   }, [navigation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (focusRef.current) {
+        focusRef.current = false;
+        return;
+      }
+      reload();
+    }, [reload])
+  );
 
   const handleBackPress = () => {
     navigation.goBack();

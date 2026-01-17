@@ -10,7 +10,7 @@ export type Car = {
   location: string;
   image: ImageSourcePropType;
   imageName: string;
-  carType?: string;
+  subCategory?: string;
   transmission?: Transmission;
   description?: string;
   seats?: number;

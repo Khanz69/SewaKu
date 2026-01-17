@@ -1,10 +1,10 @@
 import { useState } from "react";
 import {
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Modal,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 type CarTypeFilterProps = {
@@ -19,7 +19,7 @@ export const CarTypeFilter = ({
   onSelect,
 }: CarTypeFilterProps) => {
   const [open, setOpen] = useState(false);
-  const label = selectedType || "Semua Jenis";
+  const label = selectedType === "All" ? "Semua Subkategori" : selectedType;
 
   const handleSelect = (type: string) => {
     onSelect(type);
@@ -28,7 +28,7 @@ export const CarTypeFilter = ({
 
   return (
     <View>
-      <Text style={styles.sectionTitle}>Jenis Kendaraan</Text>
+      <Text style={styles.sectionTitle}>Subkategori</Text>
       <TouchableOpacity style={styles.dropdownToggle} onPress={() => setOpen(true)}>
         <Text style={styles.dropdownLabel}>{label}</Text>
         <Text style={styles.dropdownCaret}>▾</Text>

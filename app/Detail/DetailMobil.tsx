@@ -2,20 +2,21 @@ import { Colors } from "@/constants/theme";
 import { Responsive } from "@/src/constants/responsive";
 import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { productRepository } from "@/src/repositories/productRepository";
-import type { CarType, Product, Transmission } from "@/src/types/product";
+import type { Product, SubCategory, Transmission } from "@/src/types/product";
+import { SUBCATEGORY_OPTIONS } from "@/src/types/product";
 import { extractProductImageUrl, resolveProductImage } from "@/src/utils/productImage";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { RelativePathString, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Dimensions,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const { width, height } = Dimensions.get("window");
@@ -56,7 +57,7 @@ const dummyImageMap: { [key: string]: any } = {
 };
 
 const detailTabs = [
-  { name: "index", icon: require("@/assets/images/home.png"), label: "Home" },
+  { name: "home", icon: require("@/assets/images/home.png"), label: "Home" },
   { name: "PesananKu", icon: require("@/assets/images/list.png"), label: "Pesanan" },
   { name: "ProduKu", icon: require("@/assets/images/tambah.png"), label: "Tambah", size: 22 },
   { name: "Profile", icon: require("@/assets/images/profile.png"), label: "Profil" },
@@ -75,7 +76,7 @@ export default function DetailMobil() {
     bagCapacity?: string;
     transmission?: string;
     description?: string;
-    carType?: string;
+    subCategory?: string;
     code?: string;
     plateNumber?: string;
   }>();
@@ -88,10 +89,8 @@ export default function DetailMobil() {
   const normalizeTransmission = (value?: string): Transmission | undefined =>
     value === "Manual" || value === "Automatic" ? value : undefined;
 
-  const normalizeCarType = (value?: string): CarType | undefined => {
-    const allowed: CarType[] = ["City Car", "SUV", "MPV", "Sedan"];
-    return value && allowed.includes(value as CarType) ? (value as CarType) : undefined;
-  };
+  const normalizeSubCategory = (value?: string): SubCategory | undefined =>
+    value && SUBCATEGORY_OPTIONS.includes(value as SubCategory) ? (value as SubCategory) : undefined;
 
   const fallbackProduct = useMemo<Product | null>(() => {
     if (!params.name && !params.id) return null;
@@ -111,7 +110,7 @@ export default function DetailMobil() {
       seats: params.seats ? Number(params.seats) : undefined,
       bagCapacity: params.bagCapacity,
       description: params.description,
-      carType: normalizeCarType(params.carType),
+      subCategory: normalizeSubCategory(params.subCategory),
       plateNumber: params.plateNumber ?? params.code,
       createdAt: Date.now(),
       categoryKey: "mobil",
@@ -325,7 +324,7 @@ export default function DetailMobil() {
       </ScrollView>
       <View style={styles.bottomNavContainer}>
         {detailTabs.map((tab) => {
-          const targetRoute = tab.name === "index" ? "/(tabs)/index" : `/(tabs)/${tab.name}`;
+          const targetRoute = tab.name === "home" ? "/(tabs)/home" : `/(tabs)/${tab.name}`;
           return (
             <TouchableOpacity
               key={tab.name}

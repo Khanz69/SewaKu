@@ -2,13 +2,13 @@
 import type { Product } from "@/src/types/product";
 import { resolveProductImage } from "@/src/utils/productImage";
 import {
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type Props = {
@@ -22,7 +22,7 @@ export default function ProductDetailModal({ visible, product, onClose }: Props)
 
   const heroImage = resolveProductImage(product.image);
 
-  const rows: Array<{ label: string; value?: string | number }> = [
+  const rows: { label: string; value?: string | number }[] = [
     { label: "Nama Produk", value: product.name },
     { label: "Harga / hari", value: product.pricePerDay != null ? `Rp${Number(product.pricePerDay).toLocaleString("id-ID")}` : undefined },
     { label: "Lokasi", value: product.lokasi },
@@ -30,7 +30,7 @@ export default function ProductDetailModal({ visible, product, onClose }: Props)
     { label: "Jumlah Kursi", value: product.seats },
     { label: "Plat Nomor", value: product.plateNumber },
     { label: "Kapasitas Bagasi", value: product.bagCapacity },
-    { label: "Jenis Mobil", value: product.carType },
+    { label: "Subkategori", value: product.subCategory },
   ];
 
   return (

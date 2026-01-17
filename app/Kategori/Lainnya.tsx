@@ -10,7 +10,7 @@ import { SearchBar } from "../../components/SearchBar";
 
 const { height } = Dimensions.get("window");
 const CATEGORY_KEY: ProductCategoryKey = "lainnya";
-const CATEGORY_CAR_TYPES = ["Medis", "Salon", "Hiburan", "Kuliner", "Edukasi"];
+const CATEGORY_CAR_TYPES = ["Sepeda", "Perahu", "Pesawat", "ATV/Roda Tiga", "Rekreasi"];
 
 export default function Lainnya() {
   const navigation = useNavigation();

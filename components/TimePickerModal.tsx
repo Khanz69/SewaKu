@@ -1,6 +1,6 @@
 import { Responsive } from "@/src/constants/responsive";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type Props = {
@@ -8,6 +8,7 @@ type Props = {
   onConfirm: (time: string) => void;
   onCancel: () => void;
   title?: string;
+  minTime?: { hour: number; minute: number };
 };
 
 export default function TimePickerModal({
@@ -15,21 +16,60 @@ export default function TimePickerModal({
   onConfirm,
   onCancel,
   title = "Pilih Waktu",
+  minTime,
 }: Props) {
   const [selectedHour, setSelectedHour] = useState<number>(7);
   const [selectedMinute, setSelectedMinute] = useState<number>(0);
 
-  const incrementHour = () => setSelectedHour((h) => (h + 1) % 24);
-  const decrementHour = () => setSelectedHour((h) => (h - 1 + 24) % 24);
-  const incrementMinute = () => setSelectedMinute((m) => (m + 1) % 60);
-  const decrementMinute = () => setSelectedMinute((m) => (m - 1 + 60) % 60);
+  const clampTime = useCallback(
+    (hour: number, minute: number) => {
+      if (!minTime) {
+        return { hour, minute };
+      }
+      if (hour > minTime.hour) {
+        return { hour, minute };
+      }
+      if (hour < minTime.hour) {
+        return { hour: minTime.hour, minute: minTime.minute };
+      }
+      if (minute >= minTime.minute) {
+        return { hour, minute };
+      }
+      return { hour, minute: minTime.minute };
+    },
+    [minTime]
+  );
+
+  useEffect(() => {
+    if (!minTime) return;
+    const { hour, minute } = clampTime(selectedHour, selectedMinute);
+    if (hour !== selectedHour || minute !== selectedMinute) {
+      setSelectedHour(hour);
+      setSelectedMinute(minute);
+    }
+  }, [minTime, selectedHour, selectedMinute, clampTime]);
+
+  const adjustTime = (deltaMinutes: number) => {
+    const totalMinutes = (selectedHour * 60 + selectedMinute + deltaMinutes + 24 * 60) % (24 * 60);
+    const candidateHour = Math.floor(totalMinutes / 60);
+    const candidateMinute = totalMinutes % 60;
+    const { hour, minute } = clampTime(candidateHour, candidateMinute);
+    setSelectedHour(hour);
+    setSelectedMinute(minute);
+  };
 
   const formatTime = (hour: number, minute: number) => {
     return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
   };
 
   const handleConfirm = () => {
-    onConfirm(formatTime(selectedHour, selectedMinute));
+    const { hour, minute } = clampTime(selectedHour, selectedMinute);
+    if (hour !== selectedHour || minute !== selectedMinute) {
+      setSelectedHour(hour);
+      setSelectedMinute(minute);
+      return;
+    }
+    onConfirm(formatTime(hour, minute));
   };
 
   return (
@@ -48,9 +88,9 @@ export default function TimePickerModal({
             <View style={s.pickerSection}>
               <Text style={s.pickerLabel}>Jam</Text>
               <TouchableOpacity 
-                style={s.arrowButton}
-                onPress={incrementHour}
-              >
+                  style={s.arrowButton}
+                  onPress={() => adjustTime(60)}
+                >
                 <Ionicons name="chevron-up" size={32} color="#0f1e4a" />
               </TouchableOpacity>
               
@@ -60,7 +100,7 @@ export default function TimePickerModal({
               
               <TouchableOpacity 
                 style={s.arrowButton}
-                onPress={decrementHour}
+                onPress={() => adjustTime(-60)}
               >
                 <Ionicons name="chevron-down" size={32} color="#0f1e4a" />
               </TouchableOpacity>
@@ -74,7 +114,7 @@ export default function TimePickerModal({
               <Text style={s.pickerLabel}>Menit</Text>
               <TouchableOpacity 
                 style={s.arrowButton}
-                onPress={incrementMinute}
+                onPress={() => adjustTime(1)}
               >
                 <Ionicons name="chevron-up" size={32} color="#0f1e4a" />
               </TouchableOpacity>
@@ -85,7 +125,7 @@ export default function TimePickerModal({
               
               <TouchableOpacity 
                 style={s.arrowButton}
-                onPress={decrementMinute}
+                onPress={() => adjustTime(-1)}
               >
                 <Ionicons name="chevron-down" size={32} color="#0f1e4a" />
               </TouchableOpacity>
@@ -97,8 +137,9 @@ export default function TimePickerModal({
             <TouchableOpacity
               style={s.quickSelectBtn}
               onPress={() => {
-                setSelectedHour(7);
-                setSelectedMinute(0);
+                const { hour, minute } = clampTime(7, 0);
+                setSelectedHour(hour);
+                setSelectedMinute(minute);
               }}
             >
               <Text style={s.quickSelectText}>07:00</Text>
@@ -106,8 +147,9 @@ export default function TimePickerModal({
             <TouchableOpacity
               style={s.quickSelectBtn}
               onPress={() => {
-                setSelectedHour(12);
-                setSelectedMinute(0);
+                const { hour, minute } = clampTime(12, 0);
+                setSelectedHour(hour);
+                setSelectedMinute(minute);
               }}
             >
               <Text style={s.quickSelectText}>12:00</Text>
@@ -115,8 +157,9 @@ export default function TimePickerModal({
             <TouchableOpacity
               style={s.quickSelectBtn}
               onPress={() => {
-                setSelectedHour(17);
-                setSelectedMinute(0);
+                const { hour, minute } = clampTime(17, 0);
+                setSelectedHour(hour);
+                setSelectedMinute(minute);
               }}
             >
               <Text style={s.quickSelectText}>17:00</Text>
@@ -124,8 +167,9 @@ export default function TimePickerModal({
             <TouchableOpacity
               style={s.quickSelectBtn}
               onPress={() => {
-                setSelectedHour(20);
-                setSelectedMinute(0);
+                const { hour, minute } = clampTime(20, 0);
+                setSelectedHour(hour);
+                setSelectedMinute(minute);
               }}
             >
               <Text style={s.quickSelectText}>20:00</Text>

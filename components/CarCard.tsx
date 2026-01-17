@@ -26,7 +26,7 @@ export const CarCard = ({ car }: CarCardProps) => {
             seats: car.seats?.toString(),
             bagCapacity: car.bagCapacity,
             transmission: car.transmission,
-            carType: car.carType,
+            subCategory: car.subCategory,
             description: car.description,
           },
         })

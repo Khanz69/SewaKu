@@ -1,8 +1,9 @@
+import { findCategoryByKey } from "@/src/constants/productCategories";
 import { productRepository, UpdateProductPayload } from "@/src/repositories/productRepository";
 import type { Product } from "@/src/types/product";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ProductForm from "../../../components/ProductForm";
 
@@ -77,7 +78,11 @@ export default function EditProduk() {
         <TouchableOpacity style={s.backBtn} onPress={() => router.push("/ProduKu")}> 
           <Ionicons name="arrow-back" size={28} color="#fff" />
         </TouchableOpacity>
-        <ProductForm value={draft} onChange={setDraft} />
+        <ProductForm
+          value={draft}
+          onChange={setDraft}
+          subCategoryOptions={remoteProduct ? findCategoryByKey(remoteProduct.categoryKey).subCategoryOptions : undefined}
+        />
         <TouchableOpacity style={s.btn} onPress={submit} disabled={submitting}>
           <Text style={s.btnText}>{submitting ? "Menyimpan..." : "Simpan Perubahan"}</Text>
         </TouchableOpacity>

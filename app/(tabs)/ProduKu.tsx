@@ -1,18 +1,17 @@
-// ProdukKuScreen.tsx
 import { useUserProducts } from "@/src/hooks/useUserProducts";
 import { productRepository } from "@/src/repositories/productRepository";
 import type { Product } from "@/src/types/product";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    ImageBackground,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ImageBackground,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import CategoryFilter from "../../components/CategoryFilter";
 import DeleteConfirmModal from "../../components/DeleteConfirmModal";
@@ -30,6 +29,7 @@ export default function ProdukKuScreen() {
     reload,
     filterOptions,
   } = useUserProducts();
+
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [confirmVisible, setConfirmVisible] = useState(false);
@@ -48,19 +48,14 @@ export default function ProdukKuScreen() {
   const closeDetail = () => setIsDetailOpen(false);
 
   const handleConfirmDelete = () => {
-    if (!pendingDelete) {
-      setConfirmVisible(false);
-      return;
-    }
+    if (!pendingDelete) return;
 
-    const target = products.find((p) => p.id === pendingDelete);
     setConfirmVisible(false);
-    setPendingDelete(null);
-
     productRepository
       .delete(pendingDelete)
       .then(reload)
-      .catch((error) => console.warn("Gagal hapus produk:", error));
+      .catch((e) => console.warn("Gagal hapus produk:", e))
+      .finally(() => setPendingDelete(null));
   };
 
   const handleCancelDelete = () => {
@@ -86,6 +81,8 @@ export default function ProdukKuScreen() {
       resizeMode="stretch"
     >
       <StatusBar barStyle="light-content" />
+
+      {/* HEADER */}
       <View style={s.header}>
         <Text style={s.title}>ProduKu</Text>
         <TouchableOpacity
@@ -95,49 +92,55 @@ export default function ProdukKuScreen() {
           <Text style={s.addBtnText}>Tambah Produk?</Text>
         </TouchableOpacity>
       </View>
+
+      {/* FILTER */}
       <CategoryFilter
         options={filterOptions}
         selectedKey={selectedCategory}
         onSelect={setSelectedCategory}
       />
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#fff" style={s.loader} />
-      ) : error ? (
-        <Text style={s.errorText}>{error}</Text>
-      ) : (
-        <FlatList
-          data={sortedProducts}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={s.flatListContent}
-          renderItem={({ item }) => (
+      {/* SCROLL AREA */}
+      <ScrollView
+        style={s.scrollArea}
+        contentContainerStyle={s.listContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {loading ? (
+          <ActivityIndicator size="large" color="#fff" style={s.loader} />
+        ) : error ? (
+          <Text style={s.errorText}>{error}</Text>
+        ) : sortedProducts.length === 0 ? (
+          <View style={s.empty}>
+            <Text style={s.emptyText}>
+              Belum ada produk. Yuk, tambah dulu!
+            </Text>
+          </View>
+        ) : (
+          sortedProducts.map((item) => (
             <ProductCard
+              key={item.id}
               item={item}
               onPressEdit={() => router.push(`/Produk/Edit/${item.id}`)}
               onRequestDelete={askDelete}
               onPressDetail={() => openDetail(item)}
             />
-          )}
-          ListEmptyComponent={
-            <View style={s.empty}>
-              <Text style={s.emptyText}>Belum ada produk. Yuk, tambah dulu!</Text>
-            </View>
-          }
-        />
-      )}
+          ))
+        )}
+      </ScrollView>
 
-      {/* Modal detail produk */}
+      {/* MODAL DETAIL */}
       <ProductDetailModal
         visible={isDetailOpen}
         product={selectedProduct ?? undefined}
         onClose={closeDetail}
       />
 
-      {/* Modal konfirmasi hapus */}
+      {/* MODAL DELETE */}
       <DeleteConfirmModal
-        isVisible={confirmVisible} // Pastikan 'isVisible' digunakan
-        onCancel={handleCancelDelete} // Menangani pembatalan
-        onConfirm={handleConfirmDelete} // Menangani konfirmasi penghapusan
+        isVisible={confirmVisible}
+        onCancel={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
         productName={
           products.find((p) => p.id === pendingDelete)?.name ?? "produk ini"
         }
@@ -147,16 +150,20 @@ export default function ProdukKuScreen() {
 }
 
 const RED_PILL = "#A93226";
+
 const s = StyleSheet.create({
-  wrap: { flex: 1, justifyContent: "flex-start", width: "100%", height: "110%" },
+  wrap: {
+    flex: 1,
+    width: "100%",
+  },
+
   header: {
     paddingTop: 50,
     paddingHorizontal: 20,
-    paddingBottom: 5,
-    backgroundColor: "rgba(0,0,0,0)",
+    paddingBottom: 10,
     alignItems: "center",
-    zIndex: 1,
   },
+
   title: {
     color: "#fff",
     fontSize: 30,
@@ -165,33 +172,55 @@ const s = StyleSheet.create({
     marginBottom: 6,
     fontFamily: "SFHeavyItalic",
   },
+
   addBtn: {
     backgroundColor: "#fff",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 25,
     marginTop: 5,
-    marginRight: 120,
+    alignSelf: "flex-start",
     borderWidth: 2,
     borderColor: RED_PILL,
   },
-  addBtnText: { color: RED_PILL, fontWeight: "700", fontSize: 12 },
-  flatListContent: { padding: 16, paddingBottom: 150 },
-  empty: {
-    marginTop: 40,
-    backgroundColor: "rgba(255,255,255,0.3)",
-    padding: 16,
-    borderRadius: 12,
-    marginHorizontal: 16,
+
+  addBtnText: {
+    color: RED_PILL,
+    fontWeight: "700",
+    fontSize: 12,
   },
-  emptyText: { textAlign: "center", color: "#fff", fontSize: 16, fontWeight: "500" },
+
+  scrollArea: {
+    flex: 1,
+  },
+
+  listContainer: {
+    padding: 16,
+    paddingBottom: 160,
+  },
+
   loader: {
     marginTop: 40,
   },
+
   errorText: {
     marginTop: 24,
     textAlign: "center",
     color: "#fff",
     fontSize: 14,
+  },
+
+  empty: {
+    marginTop: 40,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    padding: 16,
+    borderRadius: 12,
+  },
+
+  emptyText: {
+    textAlign: "center",
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "500",
   },
 });

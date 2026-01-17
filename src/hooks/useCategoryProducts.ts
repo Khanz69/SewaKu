@@ -19,7 +19,7 @@ const buildCar = (product: Product): Car => ({
     resolveProductImage(product.image, placeholderImage as ImageSourcePropType) ??
     (placeholderImage as ImageSourcePropType),
   imageName: typeof product.image === "string" ? product.image : "",
-  carType: product.carType,
+  subCategory: product.subCategory,
   transmission: product.transmission,
   description: product.description,
   seats: product.seats,
@@ -44,7 +44,18 @@ export const useCategoryProducts = ({
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
-  const carTypes = useMemo(() => ["All", ...carTypeList], [carTypeList]);
+  const carTypes = useMemo(() => {
+    const normalized = new Set<string>();
+    const ordered: string[] = [];
+    const add = (value?: string) => {
+      const trimmed = value?.trim();
+      if (!trimmed || normalized.has(trimmed)) return;
+      normalized.add(trimmed);
+      ordered.push(trimmed);
+    };
+    carTypeList.forEach(add);
+    return ["All", ...ordered];
+  }, [carTypeList]);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -78,10 +89,12 @@ export const useCategoryProducts = ({
 
   const filterQuery = search.trim().toLowerCase();
   const filteredCars = useMemo(() => {
+    const typeQuery = selectedType.trim().toLowerCase();
     return cars.filter((car) => {
       const matchesType =
         selectedType === "All" ||
-        ((car.carType ?? "").toLowerCase() === selectedType.toLowerCase());
+        (car.subCategory?
+          car.subCategory.trim().toLowerCase() === typeQuery : false);
       const matchesSearch = filterQuery
         ? [car.name, car.location, car.price, car.description]
             .filter(Boolean)

@@ -18,7 +18,7 @@ export type ProductCategory = {
   label: string;
   description: string;
   icon: number;
-  carTypeOptions?: string[];
+  subCategoryOptions?: string[];
 };
 
 export const PRODUCT_CATEGORIES: ProductCategory[] = [
@@ -27,42 +27,42 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
     label: "Mobil",
     description: "Sewa mobil untuk berbagai kegiatan harian atau travel.",
     icon: ICON_MOBIL,
-    carTypeOptions: ["City Car", "SUV", "MPV", "Sedan"],
+    subCategoryOptions: ["City Car", "SUV", "MPV", "Sedan"],
   },
   {
     key: "motor",
     label: "Motor",
     description: "Kendaraan roda dua untuk mobilitas lebih cepat.",
     icon: ICON_MOTOR,
-    carTypeOptions: ["Sport", "Skuter", "Touring", "Cruiser", "Matic"],
+    subCategoryOptions: ["Sports", "Skuter", "Touring", "Cruiser", "Matic"],
   },
   {
     key: "alat_konstruksi",
     label: "Alat Konstruksi",
     description: "Peralatan berat untuk proyek bangunan atau jalan.",
     icon: ICON_ALAT_KONSTRUKSI,
-    carTypeOptions: ["Excavator", "Loader", "Compactor", "Mixer", "Generator"],
+    subCategoryOptions: ["Excavator", "Loader", "Compactor", "Mixer", "Generator"],
   },
   {
     key: "bus",
     label: "Bus",
     description: "Bus pariwisata, antar kota, atau shuttle perusahaan.",
     icon: ICON_BUS,
-    carTypeOptions: ["Pariwisata", "Mewah", "Medium", "Mini", "VIP"],
+    subCategoryOptions: ["Pariwisata", "Mewah", "Medium", "Mini", "VIP"],
   },
   {
     key: "logistik",
     label: "Logistik",
     description: "Unit angkutan logistik dengan kapasitas besar.",
     icon: ICON_LOGISTIK,
-    carTypeOptions: ["Pickup", "Truk", "Box", "Double Cabin", "Tangki"],
+    subCategoryOptions: ["Pickup", "Truck", "Box", "Double Cabin", "Tangki"],
   },
   {
     key: "lainnya",
     label: "Lainnya",
     description: "Kategori khusus sesuai kebutuhan Anda.",
     icon: ICON_LAINNYA,
-    carTypeOptions: ["Medis", "Salon", "Hiburan", "Kuliner", "Edukasi"],
+    subCategoryOptions: ["Sepeda", "Perahu", "Pesawat", "ATV/Roda Tiga", "Rekreasi"],
   },
 ];
 

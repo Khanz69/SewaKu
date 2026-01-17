@@ -46,11 +46,13 @@ export default function RootLayout() {
           {/* ProductProvider masih dipakai, jadi tidak aku hapus */}
           <ProductProvider>
             <Stack
+              initialRouteName="index"
               screenOptions={{
-                headerShown: true, // tampilkan navbar atas
+                headerShown: false,
                 headerTitleAlign: "center",
               }}
             >
+              <Stack.Screen name="index" options={{ headerShown: false }} />
               {/* TAB utama */}
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 

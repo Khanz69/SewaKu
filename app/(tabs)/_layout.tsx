@@ -50,11 +50,19 @@ export default function TabLayout() {
     >
       {/* 🏠 Home */}
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           title: 'Home',
           tabBarIcon: () =>
             renderIcon(require('../../assets/images/home.png'), 'home'),
+        }}
+      />
+
+      {/* Hidden index alias */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          href: null,
         }}
       />
 

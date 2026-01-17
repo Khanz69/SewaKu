@@ -24,7 +24,8 @@ export type ApiProduct = {
   transmission?: Product["transmission"];
   seats?: number;
   bag_capacity?: string;
-  car_type?: Product["carType"];
+  car_type?: Product["subCategory"];
+  subcategory?: Product["subCategory"];
   plate_number?: string;
   description?: string;
   category_key: ProductCategoryKey;
@@ -39,7 +40,7 @@ const mapApiProduct = (payload: ApiProduct): Product => ({
   transmission: payload.transmission,
   seats: payload.seats,
   bagCapacity: payload.bag_capacity,
-  carType: payload.car_type,
+  subCategory: payload.subcategory ?? payload.car_type,
   plateNumber: payload.plate_number,
   description: payload.description,
   createdAt:
@@ -57,7 +58,7 @@ const toApi = (payload: CreateProductPayload | UpdateProductPayload) => ({
   transmission: payload.transmission,
   seats: payload.seats,
   bag_capacity: payload.bagCapacity,
-  car_type: payload.carType,
+  subcategory: payload.subCategory,
   plate_number: payload.plateNumber,
   description: payload.description,
 });

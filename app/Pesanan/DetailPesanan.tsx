@@ -1,43 +1,29 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
-import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
 import DatePickerModal from "@/components/DatePickerModal";
 import TimePickerModal from "@/components/TimePickerModal";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import {
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
 export default function BuatPesanan() {
   const [tanggalSewa, setTanggalSewa] = useState("");
   const [tanggalKembali, setTanggalKembali] = useState("");
   const [waktuKembali, setWaktuKembali] = useState("");
   const [lokasi, setLokasi] = useState("");
-  const [isModalVisible, setModalVisible] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [datePickerState, setDatePickerState] = useState<{
     visible: boolean;
     type: "sewa" | "kembali" | null;
   }>({ visible: false, type: null });
   const [timePickerVisible, setTimePickerVisible] = useState(false);
-  const toggleModal = () => setModalVisible(!isModalVisible);
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!tanggalSewa.trim()) newErrors.tanggalSewa = "Tanggal sewa wajib diisi";
-    if (!tanggalKembali.trim()) newErrors.tanggalKembali = "Tanggal kembali wajib diisi";
-    if (!waktuKembali.trim()) newErrors.waktuKembali = "Waktu kembali wajib diisi";
-    if (!lokasi.trim()) newErrors.lokasi = "Lokasi pengambilan wajib diisi";
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const router = useRouter();
 

@@ -43,7 +43,7 @@ export default function CategoryTambahScreen({ initialCategoryKey }: Props) {
       transmission: draft.transmission,
       seats: draft.seats,
       bagCapacity: draft.bagCapacity,
-      carType: draft.carType,
+      subCategory: draft.subCategory,
       plateNumber: draft.plateNumber,
       description: draft.description,
       categoryKey: category.key,
@@ -73,7 +73,7 @@ export default function CategoryTambahScreen({ initialCategoryKey }: Props) {
         <Text style={s.h1}>Tambah Produk</Text>
         <Text style={s.categoryLabel}>Kategori: {category.label}</Text>
 
-        <ProductForm value={draft} onChange={setDraft} carTypeOptions={category.carTypeOptions} />
+        <ProductForm value={draft} onChange={setDraft} subCategoryOptions={category.subCategoryOptions} />
 
         <TouchableOpacity style={s.btn} onPress={submit} disabled={submitting}>
           <Text style={s.btnText}>{submitting ? "Mengirim..." : "Upload Produk"}</Text>

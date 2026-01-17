@@ -1,4 +1,4 @@
-import { CarType, Product, Transmission } from "@/src/types/product";
+import { Product, SubCategory, SUBCATEGORY_OPTIONS, Transmission } from "@/src/types/product";
 import { resolveProductImage } from "@/src/utils/productImage";
 import type { LocalImageAsset } from "@/src/utils/productRequest";
 import * as ImagePicker from "expo-image-picker";
@@ -8,15 +8,14 @@ import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "reac
 type Props = {
   value: Partial<Product>;
   onChange: (data: Partial<Product>) => void;
-  carTypeOptions?: string[];
+  subCategoryOptions?: SubCategory[];
 };
 
 const TRANSMISSIONS: Transmission[] = ["Manual", "Automatic"];
-const DEFAULT_CARTYPES: CarType[] = ["City Car", "SUV", "MPV", "Sedan"];
-export default function ProductForm({ value, onChange, carTypeOptions }: Props) {
+export default function ProductForm({ value, onChange, subCategoryOptions }: Props) {
   const [local, setLocal] = useState<Partial<Product>>(value);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const carTypes = carTypeOptions ?? DEFAULT_CARTYPES;
+  const carTypes = subCategoryOptions ?? SUBCATEGORY_OPTIONS;
   const [permissionError, setPermissionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -76,7 +75,7 @@ export default function ProductForm({ value, onChange, carTypeOptions }: Props) 
     const asset = result.assets[0];
     const enriched: LocalImageAsset = {
       uri: asset.uri,
-      base64: asset.base64,
+      base64: asset.base64 ?? undefined,
       name: asset.fileName ?? `photo-${Date.now()}.jpg`,
       type: asset.type ?? "image/jpeg",
       width: asset.width,
@@ -139,8 +138,8 @@ export default function ProductForm({ value, onChange, carTypeOptions }: Props) 
         <TextInput style={s.input} placeholder="Contoh: 1 Tas Besar" value={local.bagCapacity} onChangeText={(t) => set("bagCapacity", t)} />
       </Field>
 
-      <Field label="Jenis Mobil">
-        <Pills options={carTypes} value={local.carType} onChange={(v) => set("carType", v)} />
+      <Field label="Subkategori">
+        <Pills options={carTypes} value={local.subCategory} onChange={(v: SubCategory) => set("subCategory", v)} />
       </Field>
 
       <Field label="Lokasi" error={errors.lokasi}>
@@ -170,7 +169,7 @@ function Field({ label, children, error }: { label: string; children: React.Reac
   );
 }
 
-function Pills<T extends string>({ options, value, onChange }: { options: T[]; value?: T; onChange: (v: T) => void }) {
+function Pills<T extends string>({ options, value, onChange }: { options: readonly T[]; value?: T; onChange: (v: T) => void }) {
   return (
     <View style={s.pillsWrap}>
       {options.map((opt) => {

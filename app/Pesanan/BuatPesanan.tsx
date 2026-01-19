@@ -4,16 +4,18 @@ import { productRepository } from "@/src/repositories/productRepository";
 import type { Product, ProductCategoryKey } from "@/src/types/product";
 import { resolveProductImage } from "@/src/utils/productImage";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import Modal from "react-native-modal";
 
@@ -46,6 +48,8 @@ export default function BuatPesanan() {
   const [lokasi, setLokasi] = useState("");
   const [modal, setModal] = useState(false);
   const [agreeTnc, setAgreeTnc] = useState(false);
+  const [ktpImage, setKtpImage] = useState<string | null>(null);
+  const [simImage, setSimImage] = useState<string | null>(null);
 
   const [datePicker, setDatePicker] = useState<{
     visible: boolean;
@@ -93,6 +97,33 @@ export default function BuatPesanan() {
     waktuAmbil &&
     waktuKembali &&
     lokasi.trim().length > 0;
+
+  const requestGalleryPermission = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Izin dibutuhkan", "Izinkan akses galeri untuk memilih foto.");
+      return false;
+    }
+    return true;
+  };
+
+  const pickImage = async (setter: (value: string | null) => void) => {
+    const allowed = await requestGalleryPermission();
+    if (!allowed) return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.4,
+      base64: true,
+    });
+
+    if (result.canceled || !result.assets?.length) return;
+    const asset = result.assets[0];
+    const previewUri = asset.base64
+      ? `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`
+      : asset.uri;
+    setter(previewUri);
+  };
 
   return (
     <ScrollView
@@ -226,8 +257,30 @@ export default function BuatPesanan() {
         <View style={styles.modal}>
           <Text style={styles.pill}>Formulir Penyewaan</Text>
 
-          <TextInput style={styles.modalInput} placeholder="Foto KTP" />
-          <TextInput style={styles.modalInput} placeholder="Foto SIM" />
+          <Text style={styles.modalLabel}>Foto KTP</Text>
+          <TouchableOpacity
+            style={styles.imagePicker}
+            onPress={() => pickImage(setKtpImage)}
+          >
+            {ktpImage ? (
+              <Image source={{ uri: ktpImage }} style={styles.pickedImage} />
+            ) : (
+              <Text style={styles.imagePickerText}>Pilih Foto KTP</Text>
+            )}
+          </TouchableOpacity>
+
+          <Text style={styles.modalLabel}>Foto SIM</Text>
+          <TouchableOpacity
+            style={styles.imagePicker}
+            onPress={() => pickImage(setSimImage)}
+          >
+            {simImage ? (
+              <Image source={{ uri: simImage }} style={styles.pickedImage} />
+            ) : (
+              <Text style={styles.imagePickerText}>Pilih Foto SIM</Text>
+            )}
+          </TouchableOpacity>
+
           <TextInput style={styles.modalInput} placeholder="No HP" />
 
           <TouchableOpacity
@@ -386,7 +439,31 @@ const styles = StyleSheet.create({
   },
   submitText: { color: "#fff", fontWeight: "600" },
   modal: { backgroundColor: "#fff", borderRadius: 16, padding: 20 },
-  modalInput: { borderBottomWidth: 1, marginBottom: 16 },
+  modalInput: { borderBottomWidth: 1, marginBottom: 16, marginTop: 5},
+  modalLabel: {
+    fontSize: 12,
+    color: "#a33",
+    marginBottom: 6,
+  },
+  imagePicker: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    backgroundColor: "#fff",
+  },
+  imagePickerText: {
+    color: "#a33",
+    fontWeight: "600",
+  },
+  pickedImage: {
+    width: 120,
+    height: 80,
+    borderRadius: 8,
+  },
   checkbox: {
     width: 18,
     height: 18,

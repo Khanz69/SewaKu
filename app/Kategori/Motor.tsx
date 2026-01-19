@@ -74,7 +74,11 @@ export default function Motor() {
             onSelect={setSelectedType}
           />
         </View>
-        <ScrollView style={styles.scrollArea} contentContainerStyle={styles.listContainer}>
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+        >
           {loading ? (
             <ActivityIndicator size="large" color="#fff" />
           ) : error ? (

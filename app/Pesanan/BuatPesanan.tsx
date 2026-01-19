@@ -1,9 +1,13 @@
 import DatePickerModal from "@/components/DatePickerModal";
 import TimePickerModal from "@/components/TimePickerModal";
+import { orderRepository } from "@/src/repositories/orderRepository";
 import { productRepository } from "@/src/repositories/productRepository";
 import type { Product, ProductCategoryKey } from "@/src/types/product";
 import { resolveProductImage } from "@/src/utils/productImage";
+import type { LocalImageAsset } from "@/src/utils/productRequest";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { AxiosError } from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -48,8 +52,13 @@ export default function BuatPesanan() {
   const [lokasi, setLokasi] = useState("");
   const [modal, setModal] = useState(false);
   const [agreeTnc, setAgreeTnc] = useState(false);
-  const [ktpImage, setKtpImage] = useState<string | null>(null);
-  const [simImage, setSimImage] = useState<string | null>(null);
+  const [ktpImage, setKtpImage] = useState<LocalImageAsset | null>(null);
+  const [simImage, setSimImage] = useState<LocalImageAsset | null>(null);
+  const [ktpPreview, setKtpPreview] = useState<string | null>(null);
+  const [simPreview, setSimPreview] = useState<string | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [datePicker, setDatePicker] = useState<{
     visible: boolean;
@@ -98,6 +107,10 @@ export default function BuatPesanan() {
     waktuKembali &&
     lokasi.trim().length > 0;
 
+  const isUuid = (value?: string) =>
+    !!value &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
   const requestGalleryPermission = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -107,7 +120,15 @@ export default function BuatPesanan() {
     return true;
   };
 
-  const pickImage = async (setter: (value: string | null) => void) => {
+  const buildPreviewUri = (asset: ImagePicker.ImagePickerAsset) =>
+    asset.base64
+      ? `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`
+      : asset.uri;
+
+  const pickImage = async (
+    setter: (value: LocalImageAsset | null) => void,
+    setPreview: (value: string | null) => void
+  ) => {
     const allowed = await requestGalleryPermission();
     if (!allowed) return;
 
@@ -119,10 +140,17 @@ export default function BuatPesanan() {
 
     if (result.canceled || !result.assets?.length) return;
     const asset = result.assets[0];
-    const previewUri = asset.base64
-      ? `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`
-      : asset.uri;
-    setter(previewUri);
+    const previewUri = buildPreviewUri(asset);
+    setter({
+      uri: asset.uri,
+      base64: asset.base64 ?? undefined,
+      name: asset.fileName ?? undefined,
+      type: asset.mimeType ?? undefined,
+      width: asset.width,
+      height: asset.height,
+      size: asset.fileSize ?? undefined,
+    });
+    setPreview(previewUri);
   };
 
   return (
@@ -260,10 +288,10 @@ export default function BuatPesanan() {
           <Text style={styles.modalLabel}>Foto KTP</Text>
           <TouchableOpacity
             style={styles.imagePicker}
-            onPress={() => pickImage(setKtpImage)}
+            onPress={() => pickImage(setKtpImage, setKtpPreview)}
           >
-            {ktpImage ? (
-              <Image source={{ uri: ktpImage }} style={styles.pickedImage} />
+            {ktpPreview ? (
+              <Image source={{ uri: ktpPreview }} style={styles.pickedImage} />
             ) : (
               <Text style={styles.imagePickerText}>Pilih Foto KTP</Text>
             )}
@@ -272,16 +300,22 @@ export default function BuatPesanan() {
           <Text style={styles.modalLabel}>Foto SIM</Text>
           <TouchableOpacity
             style={styles.imagePicker}
-            onPress={() => pickImage(setSimImage)}
+            onPress={() => pickImage(setSimImage, setSimPreview)}
           >
-            {simImage ? (
-              <Image source={{ uri: simImage }} style={styles.pickedImage} />
+            {simPreview ? (
+              <Image source={{ uri: simPreview }} style={styles.pickedImage} />
             ) : (
               <Text style={styles.imagePickerText}>Pilih Foto SIM</Text>
             )}
           </TouchableOpacity>
 
-          <TextInput style={styles.modalInput} placeholder="No HP" />
+          <TextInput
+            style={styles.modalInput}
+            placeholder="No HP"
+            keyboardType="phone-pad"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+          />
 
           <TouchableOpacity
             style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}
@@ -293,18 +327,118 @@ export default function BuatPesanan() {
             <Text>Syarat dan Ketentuan</Text>
           </TouchableOpacity>
 
+          {submitError ? (
+            <Text style={styles.submitError}>{submitError}</Text>
+          ) : null}
+
           <TouchableOpacity
             style={[
               styles.submit,
-              !agreeTnc && { opacity: 0.5 },
+              (!agreeTnc || submitting) && { opacity: 0.5 },
             ]}
-            disabled={!agreeTnc}
-            onPress={() => {
-              setModal(false);
-              router.push("/(tabs)/PesananKu");
+            disabled={!agreeTnc || submitting}
+            onPress={async () => {
+              if (submitting) return;
+              setSubmitError(null);
+              if (!agreeTnc) {
+                Alert.alert("Persetujuan diperlukan", "Centang Syarat dan Ketentuan.");
+                return;
+              }
+              if (!phoneNumber.trim()) {
+                Alert.alert("Lengkapi data", "Nomor HP wajib diisi.");
+                return;
+              }
+              if (!ktpImage || !simImage) {
+                Alert.alert("Lengkapi data", "Foto KTP dan SIM wajib diisi.");
+                return;
+              }
+              if (!product.id) {
+                Alert.alert("Gagal", "Produk tidak valid.");
+                return;
+              }
+              if (!isUuid(product.id)) {
+                setSubmitError("ID produk harus UUID.");
+                return;
+              }
+              if (!product.sellerId) {
+                setSubmitError(
+                  "Seller produk belum terisi. Pastikan produk punya seller_id di database."
+                );
+                return;
+              }
+              if (!isUuid(product.sellerId)) {
+                setSubmitError("Seller ID harus UUID.");
+                return;
+              }
+
+              try {
+                setSubmitting(true);
+                const rawUser = await AsyncStorage.getItem("@sewaku_user");
+                if (!rawUser) {
+                  Alert.alert(
+                    "Perlu login",
+                    "Silakan login terlebih dahulu untuk membuat pesanan.",
+                    [
+                      { text: "Batal", style: "cancel" },
+                      {
+                        text: "Login",
+                        onPress: () => router.replace("/Registrasi/SignIn"),
+                      },
+                    ]
+                  );
+                  return;
+                }
+                const user = JSON.parse(rawUser) as { id?: string };
+                if (!user?.id) {
+                  setSubmitError("User tidak valid.");
+                  return;
+                }
+                if (!isUuid(user.id)) {
+                  setSubmitError("User ID harus UUID.");
+                  return;
+                }
+
+                await orderRepository.create({
+                  productId: product.id,
+                  buyerId: user.id,
+                  sellerId: product.sellerId,
+                  status: "pending",
+                  startDate: tanggalSewa,
+                  endDate: tanggalKembali,
+                  returnTime: waktuKembali,
+                  pickupLocation: lokasi,
+                  totalPrice,
+                  paymentMethod: "COD",
+                  ktpImageUrl: ktpImage ?? undefined,
+                  simImageUrl: simImage ?? undefined,
+                  phoneNumber: phoneNumber.trim(),
+                  termsAccepted: agreeTnc,
+                });
+
+                setModal(false);
+                Alert.alert("Berhasil", "Pesanan berhasil dibuat.");
+                router.push("/(tabs)/PesananKu");
+              } catch (error) {
+                console.warn("Gagal membuat pesanan", error);
+                const axiosError = error as AxiosError<{ message?: string }>;
+                const status = axiosError.response?.status;
+                const data = axiosError.response?.data;
+                const message =
+                  axiosError.response?.data?.message ||
+                  axiosError.message ||
+                  "Tidak bisa membuat pesanan.";
+                const detail = data ? JSON.stringify(data) : "";
+                setSubmitError(
+                  `${message}${status ? ` (Status ${status})` : ""}${detail ? `\n${detail}` : ""}`
+                );
+              } finally {
+                setSubmitting(false);
+              }
             }}
           >
-            <Text style={styles.submitText}>Kirim Formulir</Text>
+            <Text style={styles.submitText}>
+              {submitting ? "Mengirim..." : "Kirim Formulir"}
+            </Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -473,4 +607,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   checkboxInner: { width: 10, height: 10, backgroundColor: "#333" },
+  submitError: {
+    color: "#b91c1c",
+    backgroundColor: "#fee2e2",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+    fontSize: 12,
+  },
 });

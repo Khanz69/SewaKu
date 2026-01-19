@@ -35,12 +35,17 @@ export default function ProductForm({ value, onChange, subCategoryOptions }: Pro
     if (!data.name?.trim()) newErrors.name = "Nama produk wajib diisi";
     if (!data.pricePerDay || data.pricePerDay <= 0) newErrors.pricePerDay = "Harga harus lebih dari 0";
     if (!data.lokasi?.trim()) newErrors.lokasi = "Lokasi wajib diisi";
+    if (!data.transmission) newErrors.transmission = "Transmisi wajib dipilih";
     const hasImage =
       typeof data.image === "string"
         ? !!data.image.trim()
         : Boolean(data.image);
     if (!hasImage) newErrors.image = "Gambar produk wajib dipilih";
-    if (data.seats && data.seats <= 0) newErrors.seats = "Jumlah kursi harus lebih dari 0";
+    if (data.seats === undefined || data.seats <= 0) newErrors.seats = "Jumlah kursi wajib diisi";
+    if (!data.bagCapacity?.trim()) newErrors.bagCapacity = "Kapasitas bagasi wajib diisi";
+    if (!data.plateNumber?.trim()) newErrors.plateNumber = "Plat nomor wajib diisi";
+    if (!data.subCategory) newErrors.subCategory = "Subkategori wajib dipilih";
+    if (!data.description?.trim()) newErrors.description = "Deskripsi wajib diisi";
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -116,7 +121,15 @@ export default function ProductForm({ value, onChange, subCategoryOptions }: Pro
           keyboardType="numeric"
           placeholder="Jumlah Kursi"
           value={local.seats?.toString()}
-          onChangeText={(t) => set("seats", Number(t) || 0)}
+          onChangeText={(t) => {
+            const trimmed = t.trim();
+            if (!trimmed) {
+              set("seats", undefined);
+              return;
+            }
+            const parsed = Number(trimmed);
+            set("seats", Number.isFinite(parsed) ? parsed : undefined);
+          }}
         />
       </Field>
 
@@ -130,15 +143,15 @@ export default function ProductForm({ value, onChange, subCategoryOptions }: Pro
         />
       </Field>
 
-      <Field label="Plat Nomor">
+      <Field label="Plat Nomor" error={errors.plateNumber}>
         <TextInput style={s.input} placeholder="Masukkan Plat Anda" value={local.plateNumber} onChangeText={(t) => set("plateNumber", t)} />
       </Field>
 
-      <Field label="Kapasitas Bagasi">
+      <Field label="Kapasitas Bagasi" error={errors.bagCapacity}>
         <TextInput style={s.input} placeholder="Contoh: 1 Tas Besar" value={local.bagCapacity} onChangeText={(t) => set("bagCapacity", t)} />
       </Field>
 
-      <Field label="Subkategori">
+      <Field label="Subkategori" error={errors.subCategory}>
         <Pills options={carTypes} value={local.subCategory} onChange={(v: SubCategory) => set("subCategory", v)} />
       </Field>
 
@@ -146,7 +159,7 @@ export default function ProductForm({ value, onChange, subCategoryOptions }: Pro
         <TextInput style={[s.input, errors.lokasi && s.inputError]} placeholder="Masukkan Lokasi Anda" value={local.lokasi} onChangeText={(t) => set("lokasi", t)} />
       </Field>
 
-      <Field label="Deskripsi Singkat">
+      <Field label="Deskripsi Singkat" error={errors.description}>
         <TextInput
           style={[s.input, { height: 100 }]}
           multiline

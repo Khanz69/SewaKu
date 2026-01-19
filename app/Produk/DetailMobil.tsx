@@ -2,27 +2,30 @@ import { Colors } from "@/constants/theme";
 import { Responsive } from "@/src/constants/responsive";
 import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { productRepository } from "@/src/repositories/productRepository";
+import { userRepository } from "@/src/repositories/userRepository";
 import type { Product, SubCategory, Transmission } from "@/src/types/product";
 import { SUBCATEGORY_OPTIONS } from "@/src/types/product";
+import type { User } from "@/src/types/user";
 import { extractProductImageUrl, resolveProductImage } from "@/src/utils/productImage";
 import { FontAwesome5, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { RelativePathString, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Dimensions,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 
 // Mapping dummy images untuk kategori Alat Konstruksi, Bus, Motor, Logistik, dan Lainnya
 const placeholderImage = require("@/assets/images/audi.jpg");
+const placeholderAvatar = require("@/assets/images/profile.png");
 const dummyImageMap: { [key: string]: any } = {
   "excavator-cat-320": placeholderImage,
   "backhoe-jcb": placeholderImage,
@@ -84,6 +87,8 @@ export default function DetailMobil() {
   const [remoteProduct, setRemoteProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
   const [pressedTab, setPressedTab] = useState<string | null>(null);
+  const [sellerUser, setSellerUser] = useState<User | null>(null);
+  const [sellerLoading, setSellerLoading] = useState(false);
   const colorScheme = useColorScheme();
 
   const normalizeTransmission = (value?: string): Transmission | undefined =>
@@ -117,6 +122,30 @@ export default function DetailMobil() {
     };
   }, [params]);
 
+  const sellerId = remoteProduct?.sellerId ?? fallbackProduct?.sellerId;
+
+  useEffect(() => {
+    if (!sellerId) {
+      setSellerUser(null);
+      return;
+    }
+    let mounted = true;
+    setSellerLoading(true);
+    userRepository
+      .getById(sellerId)
+      .then((user) => {
+        if (mounted) setSellerUser(user);
+      })
+      .catch((error) => console.warn("Gagal ambil data penjual:", error))
+      .finally(() => {
+        if (mounted) setSellerLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [sellerId]);
+
   useEffect(() => {
     if (!params.id) return;
     let mounted = true;
@@ -139,11 +168,16 @@ export default function DetailMobil() {
   const displayedProduct = remoteProduct ?? fallbackProduct;
   const resolvedImageUrl = extractProductImageUrl(displayedProduct?.image);
   const dummyImage = resolvedImageUrl ? dummyImageMap[resolvedImageUrl] : undefined;
-  const carImageSource = dummyImage ?? resolveProductImage(displayedProduct?.image, placeholderImage) ?? placeholderImage;
+  const carImageSource =
+    dummyImage ?? resolveProductImage(displayedProduct?.image, placeholderImage) ?? placeholderImage;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#B71C1C" }}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Kontainer 1: Gambar + Tombol Kembali */}
         <View style={{ position: "relative" }}>
           <Image
@@ -284,6 +318,27 @@ export default function DetailMobil() {
               : params.price ?? "Rp0 / hari"}
           </Text>
 
+          {/* Penjual */}
+          <View style={styles.userCard}>
+            <Text style={styles.userTitle}>Penjual</Text>
+            <View style={styles.userRow}>
+              <Image
+                source={sellerUser?.avatar ? { uri: sellerUser.avatar } : placeholderAvatar}
+                style={styles.userAvatar}
+              />
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>
+                  {sellerLoading
+                    ? "Memuat..."
+                    : sellerUser?.fullName ?? "Penjual tidak tersedia"}
+                </Text>
+                <Text style={styles.userMeta}>
+                  {sellerUser?.phone ? `+${sellerUser.phone}` : "-"}
+                </Text>
+              </View>
+            </View>
+          </View>
+
           {/* Deskripsi */}
           <View style={{ borderTopWidth: 1, borderColor: "#ccc", paddingTop: 8 }}>
             <Text style={{ fontWeight: "bold", color: "#000", marginBottom: 4, fontSize: Responsive.fontSize.md }}>Deskripsi</Text>
@@ -366,6 +421,45 @@ export default function DetailMobil() {
 }
 
 const styles = StyleSheet.create({
+  userCard: {
+    marginBottom: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#eee",
+    borderRadius: 14,
+    backgroundColor: "#fafafa",
+  },
+  userTitle: {
+    fontSize: Responsive.fontSize.sm,
+    fontFamily: "SFBold",
+    color: "#1A1A1A",
+    marginBottom: 8,
+  },
+  userRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  userAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#e5e7eb",
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: Responsive.fontSize.sm,
+    fontFamily: "SFBold",
+    color: "#111",
+  },
+  userMeta: {
+    fontSize: Responsive.fontSize.xs,
+    color: "#555",
+    marginTop: 2,
+  },
   bottomNavContainer: {
     position: "absolute",
     bottom: 0,

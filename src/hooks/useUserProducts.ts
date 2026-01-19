@@ -1,6 +1,7 @@
 import { PRODUCT_CATEGORIES } from "@/src/constants/productCategories";
 import { productRepository } from "@/src/repositories/productRepository";
 import { Product } from "@/src/types/product";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const FILTER_OPTIONS = [
@@ -34,8 +35,20 @@ export const useUserProducts = (): UseUserProductsResult => {
     setLoading(true);
     setError(null);
     try {
+      const rawUser = await AsyncStorage.getItem("@sewaku_user");
+      if (!rawUser) {
+        setProducts([]);
+        return;
+      }
+      const user = JSON.parse(rawUser) as { id?: string };
+      if (!user?.id) {
+        setProducts([]);
+        return;
+      }
+
       const response = await productRepository.getAll();
-      setProducts(response);
+      const mine = response.filter((product) => product.sellerId === user.id);
+      setProducts(mine);
     } catch (globalError) {
       console.warn("Gagal memuat daftar produk:", globalError);
       setError("Gagal memuat produk.");

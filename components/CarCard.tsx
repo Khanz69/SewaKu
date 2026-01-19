@@ -14,7 +14,7 @@ export const CarCard = ({ car }: CarCardProps) => {
       style={styles.card}
       onPress={() =>
         router.push({
-          pathname: "/Detail/DetailMobil",
+          pathname: "/Produk/DetailMobil",
           params: {
             id: car.id,
             name: car.name,

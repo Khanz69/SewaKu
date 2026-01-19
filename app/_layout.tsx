@@ -63,7 +63,7 @@ export default function RootLayout() {
               />
 
               <Stack.Screen
-                name="Detail/DetailMobil"
+                name="Produk/DetailMobil"
                 options={{ title: "Detail Mobil", headerShown: false }}
               />
 
@@ -75,6 +75,14 @@ export default function RootLayout() {
               <Stack.Screen
                 name="Pesanan/DetailPesanan"
                 options={{ title: "Detail Pesanan", headerShown: false }}
+              />
+              <Stack.Screen
+                name="Pesanan/EditPesanan"
+                options={{ title: "Edit Pesanan", headerShown: false }}
+              />
+              <Stack.Screen
+                name="Pesanan/ConfirmPesanan"
+                options={{ title: "Konfirmasi Pesanan", headerShown: false }}
               />
 
               {/* ===== Halaman PRODUK (CRUD) ===== */}

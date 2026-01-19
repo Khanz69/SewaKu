@@ -75,7 +75,11 @@ export default function AlatKonstruksi() {
             onSelect={setSelectedType}
           />
         </View>
-        <ScrollView style={styles.scrollArea} contentContainerStyle={styles.listContainer}>
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+        >
           {loading ? (
             <ActivityIndicator size="large" color="#fff" />
           ) : error ? (

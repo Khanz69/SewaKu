@@ -9,6 +9,7 @@ if (!process.env.EXPO_PUBLIC_XANO_BASE_URL) {
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
+  timeout: 15000,
 });
 
 // Interceptor respons untuk penanganan kesalahan sederhana

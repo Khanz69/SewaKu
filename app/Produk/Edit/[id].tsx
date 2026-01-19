@@ -1,6 +1,6 @@
 import { findCategoryByKey } from "@/src/constants/productCategories";
 import { productRepository, UpdateProductPayload } from "@/src/repositories/productRepository";
-import type { Product } from "@/src/types/product";
+import type { Product, SubCategory } from "@/src/types/product";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -44,16 +44,16 @@ export default function EditProduk() {
       return;
     }
 
-    const payload: UpdateProductPayload = {
+    const mergedProduct = {
       ...remoteProduct,
       ...(draft as Product),
       id: remoteProduct.id,
-      createdAt: remoteProduct.createdAt,
     };
+    const { createdAt: _createdAt, ...payload } = mergedProduct;
 
     try {
       setSubmitting(true);
-      await productRepository.update(payload);
+      await productRepository.update(payload as UpdateProductPayload);
       Alert.alert("Berhasil", "Perubahan produk berhasil disimpan.");
       router.back();
     } catch (error) {
@@ -73,7 +73,10 @@ export default function EditProduk() {
   return (
     <View style={{ flex: 1, backgroundColor: "#A83232" }}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView contentContainerStyle={{ padding: 12 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 12 }}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={s.h1}>Edit Produk</Text>
         <TouchableOpacity style={s.backBtn} onPress={() => router.push("/ProduKu")}> 
           <Ionicons name="arrow-back" size={28} color="#fff" />
@@ -81,7 +84,13 @@ export default function EditProduk() {
         <ProductForm
           value={draft}
           onChange={setDraft}
-          subCategoryOptions={remoteProduct ? findCategoryByKey(remoteProduct.categoryKey).subCategoryOptions : undefined}
+          subCategoryOptions={
+            remoteProduct
+              ? (findCategoryByKey(remoteProduct.categoryKey).subCategoryOptions as
+                  | SubCategory[]
+                  | undefined)
+              : undefined
+          }
         />
         <TouchableOpacity style={s.btn} onPress={submit} disabled={submitting}>
           <Text style={s.btnText}>{submitting ? "Menyimpan..." : "Simpan Perubahan"}</Text>

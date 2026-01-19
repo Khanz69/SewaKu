@@ -1,20 +1,40 @@
 import { Responsive } from "@/src/constants/responsive";
 import { usePesananKu } from "@/src/hooks/usePesananKu";
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo, useState } from "react";
 import {
-  ImageBackground,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    ImageBackground,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import OrderCard from "../components/OrderCard";
 
 export default function PesananKuScreen() {
-  const { selectedTab, setSelectedTab, search, setSearch, tabs, orders } =
-    usePesananKu();
+  const {
+    selectedTab,
+    setSelectedTab,
+    search,
+    setSearch,
+    tabs,
+    orders,
+    orderFlow,
+    setOrderFlow,
+    loading,
+  } = usePesananKu();
+
+  const [flowDropdownOpen, setFlowDropdownOpen] = useState(false);
+  const flowLabel = useMemo(
+    () => (orderFlow === "seller_to_customer" ? "Pesanan Masuk" : "Pesanan Keluar"),
+    [orderFlow]
+  );
+
+  const filteredOrders = orders;
 
   return (
     <ImageBackground
@@ -22,7 +42,7 @@ export default function PesananKuScreen() {
       style={styles.background}
       resizeMode="stretch"
     >
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <Text style={styles.header}>PesananKu</Text>
 
         <View style={styles.searchBox}>
@@ -35,6 +55,49 @@ export default function PesananKuScreen() {
             onChangeText={setSearch}
           />
         </View>
+
+        <Text style={styles.sectionTitle}>Filter Pesanan</Text>
+        <TouchableOpacity
+          style={styles.dropdownToggle}
+          onPress={() => setFlowDropdownOpen(true)}
+        >
+          <Text style={styles.dropdownLabel}>{flowLabel}</Text>
+          <Text style={styles.dropdownCaret}>▾</Text>
+        </TouchableOpacity>
+
+        <Modal
+          transparent
+          animationType="fade"
+          visible={flowDropdownOpen}
+          onRequestClose={() => setFlowDropdownOpen(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setFlowDropdownOpen(false)}
+          >
+            <View style={styles.dropdownList}>
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setOrderFlow("seller_to_customer");
+                  setFlowDropdownOpen(false);
+                }}
+              >
+                <Text style={styles.dropdownItemText}>Pesanan Masuk</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setOrderFlow("customer_to_seller");
+                  setFlowDropdownOpen(false);
+                }}
+              >
+                <Text style={styles.dropdownItemText}>Pesanan Keluar</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         <View style={styles.tabContainer}>
           {tabs.map((tab) => (
@@ -58,9 +121,19 @@ export default function PesananKuScreen() {
           ))}
         </View>
 
-        {orders.map((order, index) => (
-          <OrderCard key={index} order={order} />
-        ))}
+        {loading ? (
+          <ActivityIndicator size="large" color="#fff" style={styles.loader} />
+        ) : filteredOrders.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>
+              Belum ada pesanan. Yuk, buat pesanan dulu!
+            </Text>
+          </View>
+        ) : (
+          filteredOrders.map((order, index) => (
+            <OrderCard key={index} order={order} />
+          ))
+        )}
       </ScrollView>
     </ImageBackground>
   );
@@ -100,15 +173,59 @@ const styles = StyleSheet.create({
     color: "#000",
     fontSize: Responsive.fontSize.md,
   },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#fff",
+    marginTop: 6,
+    marginBottom: 10,
+  },
   tabContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
     marginBottom: Responsive.spacing.lg,
   },
+  dropdownToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#efbdbd86",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  dropdownLabel: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  dropdownCaret: {
+    color: "#fff",
+    fontSize: 18,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  dropdownList: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: "#1A1A1A",
+  },
   tabButton: {
     backgroundColor: "#8B0000",
-    paddingVertical: Responsive.spacing.xs,
-    paddingHorizontal: Responsive.spacing.xxl,
+    paddingVertical: Responsive.spacing.sm,
+    paddingHorizontal: Responsive.spacing.xxxl,
     borderRadius: Responsive.borderRadius.xl,
     opacity: 0.6,
   },
@@ -119,10 +236,25 @@ const styles = StyleSheet.create({
   tabText: {
     color: "#fff",
     fontWeight: "600",
-    fontSize: Responsive.fontSize.sm,
+    fontSize: Responsive.fontSize.md,
   },
   tabTextActive: {
     color: "#C0342F",
-    fontSize: Responsive.fontSize.sm,
+    fontSize: Responsive.fontSize.md,
+  },
+  emptyState: {
+    marginTop: 40,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    padding: 16,
+    borderRadius: 20,
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  loader: {
+    marginTop: 24,
   },
 });

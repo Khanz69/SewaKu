@@ -4,6 +4,7 @@ import { normalizeProductCategoryKey } from "@/src/constants/productCategories";
 import type { Product } from "@/src/types/product";
 import type { ProductImageField } from "@/src/utils/productImage";
 import { buildProductRequestBody } from "@/src/utils/productRequest";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const RESOURCE = "/produk";
 
@@ -21,6 +22,10 @@ export type ApiProduct = {
   price_per_day: number;
   lokasi: string;
   image?: ProductImageField;
+  seller_id?: string;
+  user_id?: string;
+  owner_id?: string;
+  seller?: string;
   transmission?: Product["transmission"];
   seats?: number;
   bag_capacity?: string;
@@ -37,6 +42,7 @@ const mapApiProduct = (payload: ApiProduct): Product => ({
   pricePerDay: Number(payload.price_per_day) || 0,
   lokasi: payload.lokasi,
   image: payload.image,
+  sellerId: payload.seller_id ?? payload.user_id ?? payload.owner_id ?? payload.seller,
   transmission: payload.transmission,
   seats: payload.seats,
   bagCapacity: payload.bag_capacity,
@@ -50,18 +56,43 @@ const mapApiProduct = (payload: ApiProduct): Product => ({
   categoryKey: normalizeProductCategoryKey(payload.category_key),
 });
 
+const normalizeSubcategory = (
+  value?: Product["subCategory"],
+  categoryKey?: ProductCategoryKey
+) => {
+  if (!value) return value;
+  if (categoryKey === "motor" && value === "Sports") return "Sports ";
+  return value;
+};
+
 const toApi = (payload: CreateProductPayload | UpdateProductPayload) => ({
   name: payload.name,
   price_per_day: payload.pricePerDay,
   lokasi: payload.lokasi,
   image: payload.image,
+  seller: payload.sellerId,
   transmission: payload.transmission,
   seats: payload.seats,
   bag_capacity: payload.bagCapacity,
-  subcategory: payload.subCategory,
+  subcategory: normalizeSubcategory(payload.subCategory, payload.categoryKey),
   plate_number: payload.plateNumber,
   description: payload.description,
 });
+
+const attachSellerId = async <T extends CreateProductPayload | UpdateProductPayload>(
+  payload: T
+): Promise<T> => {
+  if (payload.sellerId) return payload;
+  try {
+    const rawUser = await AsyncStorage.getItem("@sewaku_user");
+    if (!rawUser) return payload;
+    const user = JSON.parse(rawUser) as { id?: string };
+    if (!user?.id) return payload;
+    return { ...payload, sellerId: user.id } as T;
+  } catch {
+    return payload;
+  }
+};
 
 export const productRepository = {
   async getAll(): Promise<Product[]> {
@@ -75,7 +106,11 @@ export const productRepository = {
   },
 
   async create(payload: CreateProductPayload): Promise<Product> {
-    const { body, headers } = buildProductRequestBody(toApi(payload), payload.categoryKey);
+    const normalizedPayload = await attachSellerId(payload);
+    const { body, headers } = buildProductRequestBody(
+      toApi(normalizedPayload),
+      normalizedPayload.categoryKey
+    );
     const config = headers ? { headers } : undefined;
     const response = await apiClient.post<ApiProduct>(RESOURCE, body, config);
     return mapApiProduct(response.data);

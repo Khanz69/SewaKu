@@ -2,13 +2,13 @@
 import type { Product } from "@/src/types/product";
 import { resolveProductImage } from "@/src/utils/productImage";
 import {
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 type Props = {
@@ -44,7 +44,7 @@ export default function ProductDetailModal({ visible, product, onClose }: Props)
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={s.content}>
+          <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
             {heroImage ? (
               <Image source={heroImage} style={s.heroImg} />
             ) : (

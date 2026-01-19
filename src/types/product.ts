@@ -46,6 +46,7 @@ export interface Product {
   pricePerDay: number;
   lokasi: string;
   image?: ProductImageField;
+  sellerId?: string;
   transmission?: Transmission;
   seats?: number;
   bagCapacity?: string;
